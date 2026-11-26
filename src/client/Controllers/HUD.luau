@@ -435,7 +435,7 @@ local function build()
 		Text = "🎵",
 		Color = Color3.fromRGB(60, 50, 70),
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(0, -8, 0, 0),
+		Position = UDim2.fromOffset(-8, 0),
 		Size = UDim2.fromOffset(40, 40),
 		Parent = goal,
 		MaxTextSize = 24,
