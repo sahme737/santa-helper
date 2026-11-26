@@ -742,42 +742,42 @@ Config.OFFLINE = {
 Config.BOOST_MULTIPLIER = 2
 
 -------------------------------------------------------------------------------
--- Robux. Fill in the ids after creating them in the Creator Dashboard.
+-- Robux. Ids come from the Creator Dashboard (Monetization) of the experience.
 -- An id of 0 hides the item as "coming soon" so nothing breaks before setup.
 -------------------------------------------------------------------------------
 export type PassDef = { key: string, id: number, name: string, description: string, robux: number }
 Config.GAME_PASSES = {
 	{
 		key = "DoubleCheer",
-		id = 0,
+		id = 2101829911,
 		name = "Double Cheer",
 		description = "x2 Cheer from every toy, forever.",
 		robux = 249,
 	},
 	{
 		key = "AutoLoader",
-		id = 0,
+		id = 2099340685,
 		name = "Elf Auto-Loader",
 		description = "Your sack loads the sleigh by itself.",
 		robux = 149,
 	},
 	{
 		key = "LuckyHooves",
-		id = 0,
+		id = 2099418777,
 		name = "Lucky Hooves",
 		description = "x2 odds for Epic, Legendary and Mythic reindeer.",
 		robux = 199,
 	},
 	{
 		key = "ExtraStall",
-		id = 0,
+		id = 2099382661,
 		name = "Extra Stable Stall",
 		description = "Equip 1 more reindeer.",
 		robux = 149,
 	},
 	{
 		key = "VIP",
-		id = 0,
+		id = 2098944677,
 		name = "North Pole VIP",
 		description = "Golden Crown, gold name tag and +25% Snowflakes.",
 		robux = 299,
@@ -795,7 +795,7 @@ export type ProductDef = {
 Config.DEV_PRODUCTS = {
 	{
 		key = "Snowflakes100",
-		id = 0,
+		id = 3736687123,
 		name = "Handful of Snowflakes",
 		description = "100 Snowflakes",
 		robux = 49,
@@ -803,7 +803,7 @@ Config.DEV_PRODUCTS = {
 	},
 	{
 		key = "Snowflakes550",
-		id = 0,
+		id = 3736687283,
 		name = "Snowdrift of Snowflakes",
 		description = "550 Snowflakes (+10%)",
 		robux = 229,
@@ -811,7 +811,7 @@ Config.DEV_PRODUCTS = {
 	},
 	{
 		key = "Snowflakes1500",
-		id = 0,
+		id = 3736687428,
 		name = "Blizzard of Snowflakes",
 		description = "1,500 Snowflakes (+25%)",
 		robux = 549,
@@ -819,7 +819,7 @@ Config.DEV_PRODUCTS = {
 	},
 	{
 		key = "CocoaBoost",
-		id = 0,
+		id = 3736687596,
 		name = "Hot Cocoa Boost",
 		description = "x2 Cheer for 30 minutes",
 		robux = 39,
@@ -827,7 +827,7 @@ Config.DEV_PRODUCTS = {
 	},
 	{
 		key = "NorthernLights",
-		id = 0,
+		id = 3736687720,
 		name = "Northern Lights Reindeer",
 		description = "Exclusive reindeer, +400% Cheer",
 		robux = 399,
