@@ -152,7 +152,7 @@ function HUD.floatGain(text: string, color: Color3?)
 	local label = UI.text({
 		Text = text,
 		Size = UDim2.fromScale(0.25, 0.06),
-		Position = UDim2.new(0.02, 0, 0.2, 0),
+		Position = UDim2.fromScale(0.02, 0.2),
 		TextColor3 = color or T.Gold,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		MaxTextSize = 40,
@@ -208,7 +208,7 @@ local function build()
 	-- Currencies (top-left)
 	local left: Frame = UI.make("Frame", {
 		BackgroundTransparency = 1,
-		Position = UDim2.new(0, 12, 0, 8),
+		Position = UDim2.fromOffset(12, 8),
 		Size = UDim2.fromScale(0.24, 0.26),
 		Parent = screen,
 	})

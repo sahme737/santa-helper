@@ -496,7 +496,7 @@ function PetsPanel.build(screen: ScreenGui)
 	for i, egg in Config.EGGS do
 		local card = UI.card(eggList, { Size = UDim2.new(1, -12, 0, 130), LayoutOrder = i })
 		local eggIcon: Frame = UI.make("Frame", {
-			Size = UDim2.new(0, 70, 0, 92),
+			Size = UDim2.fromOffset(70, 92),
 			Position = UDim2.new(0, 14, 0.5, 0),
 			AnchorPoint = Vector2.new(0, 0.5),
 			BackgroundColor3 = egg.color,
@@ -507,7 +507,7 @@ function PetsPanel.build(screen: ScreenGui)
 		UI.text({
 			Text = egg.name,
 			Size = UDim2.new(0.55, -100, 0, 34),
-			Position = UDim2.new(0, 100, 0, 8),
+			Position = UDim2.fromOffset(100, 8),
 			TextColor3 = T.Ink,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			MaxTextSize = 26,
@@ -516,7 +516,7 @@ function PetsPanel.build(screen: ScreenGui)
 		local odds = UI.text({
 			Text = "",
 			Size = UDim2.new(0.6, -100, 0, 74),
-			Position = UDim2.new(0, 100, 0, 44),
+			Position = UDim2.fromOffset(100, 44),
 			TextColor3 = T.Muted,
 			FontFace = UI.BodyFont,
 			TextXAlignment = Enum.TextXAlignment.Left,

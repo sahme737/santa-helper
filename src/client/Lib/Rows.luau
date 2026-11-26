@@ -32,7 +32,7 @@ function Rows.row(parent: Instance, order: number, icon: string, onClick: () -> 
 	local frame = UI.card(parent, { Size = UDim2.new(1, 0, 0, 78), LayoutOrder = order })
 	local iconLabel = UI.text({
 		Text = icon,
-		Size = UDim2.new(0, 60, 0, 60),
+		Size = UDim2.fromOffset(60, 60),
 		Position = UDim2.new(0, 10, 0.5, 0),
 		AnchorPoint = Vector2.new(0, 0.5),
 		MaxTextSize = 44,

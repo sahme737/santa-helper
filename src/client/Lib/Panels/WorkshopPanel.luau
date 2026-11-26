@@ -111,7 +111,7 @@ function WorkshopPanel.build(screen: ScreenGui)
 		UI.card(pages["New Season"], { Size = UDim2.new(1, 0, 0, 300), LayoutOrder = 1 })
 	local seasonText = UI.text({
 		Text = "",
-		Size = UDim2.new(0.92, 0, 0.62, 0),
+		Size = UDim2.fromScale(0.92, 0.62),
 		Position = UDim2.fromScale(0.04, 0.05),
 		TextColor3 = UI.Theme.Ink,
 		FontFace = UI.BodyFont,

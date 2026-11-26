@@ -193,7 +193,7 @@ function GiftsPanel.build(screen: ScreenGui)
 		local card = UI.card(playtime, { Size = UDim2.new(1, -12, 0, 70), LayoutOrder = i })
 		UI.text({
 			Text = REWARD_EMOJI[gift.reward.kind] or "🎁",
-			Size = UDim2.new(0, 56, 0, 56),
+			Size = UDim2.fromOffset(56, 56),
 			Position = UDim2.new(0, 10, 0.5, 0),
 			AnchorPoint = Vector2.new(0, 0.5),
 			Parent = card,
