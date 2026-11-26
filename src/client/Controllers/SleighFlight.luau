@@ -441,10 +441,11 @@ function SleighFlight.init()
 	UI.button({
 		Text = "Land",
 		Color = T.Muted,
-		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -24, 1, -290),
-		Size = UDim2.fromOffset(130, 48),
-		Parent = hud,
+		-- Sits just left of DROP so it never collides with the top-right HUD.
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(0, -12, 0.5, 0),
+		Size = UDim2.fromOffset(110, 48),
+		Parent = drop,
 		MaxTextSize = 20,
 		OnClick = function()
 			Net.request("EndDelivery")
