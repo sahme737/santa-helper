@@ -374,7 +374,7 @@ local function step(dt: number)
 	-- Keep the sleigh inside the town.
 	local flat =
 		Vector3.new(f.root.Position.X - f.townOrigin.X, 0, f.root.Position.Z - f.townOrigin.Z)
-	if flat.Magnitude > 600 then
+	if flat.Magnitude > 720 then
 		local toCenter = -flat.Unit
 		local desiredYaw = math.atan2(-toCenter.X, -toCenter.Z)
 		local diff = (desiredYaw - f.yaw + math.pi) % (math.pi * 2) - math.pi
@@ -418,7 +418,7 @@ local function step(dt: number)
 		local right = Vector3.new(-look.Z, 0, look.X)
 		local angle = math.deg(math.atan2(windVector:Dot(right), windVector:Dot(look)))
 		windLabel.Rotation = angle - 90
-		windLabel.TextTransparency = 1 - math.clamp(math.abs(gust) * 1.4, 0.15, 1)
+		windLabel.TextTransparency = 1 - math.clamp(math.abs(gust) * 1.4, 0.35, 1)
 	end
 	f.velocity.VectorVelocity = look * speed + windVector + Vector3.new(0, climb, 0)
 	f.align.CFrame = CFrame.Angles(0, f.yaw, 0)
@@ -758,7 +758,7 @@ function SleighFlight.init()
 		Parent = hud,
 	})
 	windLabel = UI.text({
-		Text = "➤",
+		Text = "➡️",
 		Size = UDim2.fromScale(1, 1),
 		TextColor3 = Color3.fromRGB(190, 230, 255),
 		MaxTextSize = 54,
