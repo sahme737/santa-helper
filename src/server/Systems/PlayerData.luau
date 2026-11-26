@@ -94,6 +94,7 @@ end
 type Session = {
 	profile: Profile,
 	saving: boolean,
+	releasing: boolean, -- a final save is in progress; gameplay must stop touching the profile
 	released: boolean,
 	persist: boolean, -- false when DataStores are unavailable in Studio
 }
@@ -216,11 +217,22 @@ local function save(player: Player, release: boolean): boolean
 	if not session or session.released then
 		return false
 	end
+	if release then
+		-- From here on PlayerData.get() returns nil, so nothing can be granted
+		-- into a profile whose final snapshot is about to be written.
+		session.releasing = true
+	elseif session.releasing then
+		return false
+	end
 	-- Avoid overlapping writes to the same key.
 	local waited = 0
 	while session.saving and waited < 30 do
 		task.wait(0.5)
 		waited += 0.5
+	end
+	-- Re-check: a release may have finished (or started) while we waited.
+	if session.released or (not release and session.releasing) then
+		return false
 	end
 	session.saving = true
 	local ok = writeProfile(player, session, release)
@@ -263,8 +275,13 @@ local function onPlayerAdded(player: Player)
 		return
 	end
 
-	local session: Session =
-		{ profile = profile, saving = false, released = false, persist = persist }
+	local session: Session = {
+		profile = profile,
+		saving = false,
+		releasing = false,
+		released = false,
+		persist = persist,
+	}
 
 	if player.Parent ~= Players then
 		-- Left while loading: release the lock right away.
@@ -307,7 +324,7 @@ end
 
 function PlayerData.get(player: Player): Profile?
 	local session = sessions[player]
-	if session and not session.released then
+	if session and not session.released and not session.releasing then
 		return session.profile
 	end
 	return nil
@@ -335,7 +352,7 @@ end
 
 function PlayerData.forEach(cb: (Player, Profile) -> ())
 	for player, session in sessions do
-		if not session.released then
+		if not session.released and not session.releasing then
 			cb(player, session.profile)
 		end
 	end

@@ -260,6 +260,12 @@ function Pets.gift(player: Player, uid: string, targetUserId: number): (boolean,
 	end
 	PlayerState.emit("pets", player)
 	PlayerState.addPet(target, targetProfile, pet.id, pet.golden)
+	-- Persist both sides right away so a crash can't roll back only the
+	-- sender (which would duplicate the reindeer). Sender first.
+	task.spawn(function()
+		PlayerData.saveNow(player)
+		PlayerData.saveNow(target)
+	end)
 	local name = (if pet.golden then "Golden " else "") .. (if def then def.name else pet.id)
 	Net.toast(target, `🎁 {player.DisplayName} gifted you a {name}!`, "success")
 	return true, `Gifted {name} to {target.DisplayName}!`
@@ -316,7 +322,7 @@ function Pets.start()
 	end)
 	Net.handle("GiftPet", 0.5, 2, function(player, uid: unknown, targetUserId: unknown)
 		local id = Guard.string(uid, 16)
-		local target = Guard.int(targetUserId, 1, 2 ^ 53)
+		local target = Guard.int(targetUserId, -(2 ^ 53), 2 ^ 53) -- Studio test players are negative
 		if not id or not target then
 			return false, "Bad request"
 		end

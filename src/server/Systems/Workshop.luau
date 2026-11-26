@@ -975,6 +975,7 @@ local function claimPlot(player: Player, profile: Profile)
 		end
 	end
 	warn(`[Workshop] no free plot for {player.Name}`)
+	player:Kick("This North Pole server is full of workshops! Please join another server.")
 end
 
 local function releasePlot(player: Player)
@@ -1006,7 +1007,7 @@ local function productionTick(dt: number)
 			if profile.sack < capacity then
 				local income = Economy.incomePerSecond(profile, PlayerState.ctx(player))
 				profile.sack = math.min(capacity, profile.sack + income * dt)
-				PlayerState.dirty(player)
+				PlayerState.tickDirty(player)
 			end
 			if renderSacks then
 				renderSack(index, profile)

@@ -6,9 +6,11 @@
 2. File → Publish to Roblox → create a new experience "Santa's Little Helper".
 3. Game Settings → Security → turn on **Enable Studio Access to API Services**
    (to test saving in Studio).
-4. Game Settings → Avatar: R15 recommended (sweaters and hats are sized for it,
+4. Game Settings → Places → **Max Players: 6** (there are 6 workshops; a 7th
+   player would be asked to join another server).
+5. Game Settings → Avatar: R15 recommended (sweaters and hats are sized for it,
    R6 works too).
-5. Playtest with 2-3 players (Test → Clients and Servers) to check plots,
+6. Playtest with 2-3 players (Test → Clients and Servers) to check plots,
    pet gifting, present drops and the server goal.
 
 ## 2. Create the Robux items

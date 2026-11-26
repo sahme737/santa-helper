@@ -37,6 +37,8 @@ type Run = {
 	lastPosAt: number,
 	speed: number,
 	radius: number,
+	suspendedUntil: number, -- drops ignored after an impossible movement
+	sampleAt: number,
 	model: Model?,
 	connections: { RBXScriptConnection },
 }
@@ -186,6 +188,8 @@ function Sleigh.beginRun(player: Player): (boolean, any)
 		lastPosAt = nowTime,
 		speed = stats.speed,
 		radius = stats.radius,
+		suspendedUntil = nowTime + 0.5,
+		sampleAt = nowTime,
 		model = model,
 		connections = {},
 	}
@@ -235,14 +239,15 @@ function Sleigh.drop(player: Player): (boolean, any)
 		return false, "Not flying"
 	end
 
-	-- Plausibility: the sleigh can't move faster than its speed (with slack).
-	local pos = root.Position
-	local dt = math.max(now - run.lastPosAt, 0.05)
-	local moved = (pos - run.lastPos).Magnitude
-	run.lastPos = pos
-	run.lastPosAt = now
-	if moved > run.speed * dt * 1.8 + 40 then
+	-- Movement is sampled every frame on the server (see start()); after an
+	-- impossible jump, drops are ignored for a moment.
+	if now < run.suspendedUntil then
 		return false, "Whoa, too fast!"
+	end
+	local pos = root.Position
+	local altitude = pos.Y - WorldBuilder.TOWN_ORIGIN.Position.Y
+	if math.abs(altitude - Config.SLEIGH.ALTITUDE) > 30 then
+		return false, "miss"
 	end
 
 	local best: number? = nil
@@ -287,7 +292,30 @@ function Sleigh.drop(player: Player): (boolean, any)
 		{ index = best, reward = reward, combo = run.combo, count = run.count, snowflakes = snow }
 end
 
+-- Server-side movement sampling: a client that teleports between chimneys
+-- (instead of flying) gets its drops suspended.
+local function sampleRuns()
+	local now = os.clock()
+	for player, run in runs do
+		if now - run.sampleAt >= 0.2 then
+			local root = rootOf(player)
+			if root then
+				local pos = root.Position
+				local dt = now - run.lastPosAt
+				local flat = Vector3.new(pos.X - run.lastPos.X, 0, pos.Z - run.lastPos.Z).Magnitude
+				if flat > run.speed * 1.4 * dt * 1.6 + 15 then
+					run.suspendedUntil = now + 1.5
+				end
+				run.lastPos = pos
+				run.lastPosAt = now
+				run.sampleAt = now
+			end
+		end
+	end
+end
+
 function Sleigh.start()
+	game:GetService("RunService").Heartbeat:Connect(sampleRuns)
 	Net.handle("StartDelivery", 0.5, 2, function(player)
 		return Sleigh.beginRun(player)
 	end)

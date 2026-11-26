@@ -58,4 +58,5 @@ export type Breakdown = {
 	total: number,
 }
 
-return nil
+-- ModuleScripts must return exactly one non-nil value.
+return {}

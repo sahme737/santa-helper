@@ -24,6 +24,7 @@ type Session = {
 	joinedAt: number,
 	playtimeClaimed: { [number]: boolean },
 	dirty: boolean,
+	tickDirty: boolean, -- only coins/sack changed (cheap update)
 	plotIndex: number?,
 	extra: { [string]: any }, -- per-system session values included in the snapshot
 	leaderstats: Folder?,
@@ -34,12 +35,26 @@ local changeListeners: { [string]: { (Player, Profile) -> () } } = {}
 
 local function session(player: Player): Session
 	local s = sessions[player]
+	if not s and player.Parent ~= Players then
+		-- Player already left: hand back a throwaway session instead of leaking one.
+		return {
+			passes = {},
+			joinedAt = os.time(),
+			playtimeClaimed = {},
+			dirty = false,
+			tickDirty = false,
+			plotIndex = nil,
+			extra = {},
+			leaderstats = nil,
+		}
+	end
 	if not s then
 		s = {
 			passes = {},
 			joinedAt = os.time(),
 			playtimeClaimed = {},
 			dirty = true,
+			tickDirty = false,
 			plotIndex = nil,
 			extra = {},
 			leaderstats = nil,
@@ -74,6 +89,12 @@ end
 
 function PlayerState.dirty(player: Player)
 	session(player).dirty = true
+end
+
+-- Production ticks only change coins and the sack: send a tiny update
+-- instead of the whole snapshot.
+function PlayerState.tickDirty(player: Player)
+	session(player).tickDirty = true
 end
 
 function PlayerState.onChanged(kind: string, cb: (Player, Profile) -> ())
@@ -290,8 +311,19 @@ local function flush()
 			local profile = PlayerData.get(player)
 			if profile then
 				s.dirty = false
+				s.tickDirty = false
 				updateLeaderstats(player, profile)
 				Net.push(player, "State", snapshot(player, profile))
+			end
+		elseif s.tickDirty then
+			local profile = PlayerData.get(player)
+			if profile then
+				s.tickDirty = false
+				Net.push(
+					player,
+					"Tick",
+					{ coins = profile.coins, sack = profile.sack, serverTime = os.time() }
+				)
 			end
 		end
 	end
@@ -344,8 +376,14 @@ function PlayerState.start()
 		end
 		for _, pass in Config.GAME_PASSES do
 			if pass.id ~= 0 and pass.id == passId then
-				PlayerState.setPass(player, pass.key)
-				Net.toast(player, `Thank you! {pass.name} unlocked!`, "success")
+				-- Re-verify ownership instead of trusting the event flag.
+				local ok, owns = pcall(function()
+					return MarketplaceService:UserOwnsGamePassAsync(player.UserId, pass.id)
+				end)
+				if ok and owns then
+					PlayerState.setPass(player, pass.key)
+					Net.toast(player, `Thank you! {pass.name} unlocked!`, "success")
+				end
 			end
 		end
 	end)

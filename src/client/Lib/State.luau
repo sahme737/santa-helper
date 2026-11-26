@@ -24,6 +24,20 @@ function State.now(): number
 end
 
 function State.profile(): any
+	-- Lightweight production updates: only coins and sack changed.
+	Net.on("Tick", function(tick)
+		local data = State.data
+		if not data then
+			return
+		end
+		data.profile.coins = tick.coins
+		data.profile.sack = tick.sack
+		data.serverTime = tick.serverTime
+		for _, fn in listeners do
+			task.spawn(fn, data)
+		end
+	end)
+
 	return State.data and State.data.profile
 end
 
@@ -33,6 +47,20 @@ Net.on("State", function(snapshot)
 	State.timeOffset = snapshot.serverTime - os.time()
 	for _, fn in listeners do
 		task.spawn(fn, snapshot)
+	end
+end)
+
+-- Lightweight production updates: only coins and sack changed.
+Net.on("Tick", function(tick)
+	local data = State.data
+	if not data then
+		return
+	end
+	data.profile.coins = tick.coins
+	data.profile.sack = tick.sack
+	data.serverTime = tick.serverTime
+	for _, fn in listeners do
+		task.spawn(fn, data)
 	end
 end)
 

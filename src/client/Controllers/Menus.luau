@@ -66,10 +66,6 @@ function Menus.start()
 		if processed then
 			return
 		end
-		if input.KeyCode == Enum.KeyCode.Escape then
-			UI.closeAll()
-			return
-		end
 		local name = keys[input.KeyCode]
 		if name then
 			Bus.fire("OpenMenu", name)
