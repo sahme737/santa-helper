@@ -39,6 +39,11 @@ local toastHolder: Frame
 local announceLabel: TextLabel
 local giftBadge: Frame
 local coinFrame: Frame
+local rankLabel: TextLabel
+local rankFill: Frame
+local rankFrame: Frame
+local musicButton: TextButton
+local lastRank = 0
 
 local function counter(
 	parent: Instance,
@@ -109,9 +114,11 @@ function HUD.toast(text: string, kind: string?)
 	UI.textStroke(label, T.Ink, 1.5)
 	UI.pop(frame, 0.7)
 	if kind == "error" then
-		UI.sound("Pop", 0.3, 0.7)
-	elseif kind == "success" or kind == "event" then
-		UI.sound("Coin", 0.35, 1.2)
+		UI.sound("Error", 0.4)
+	elseif kind == "success" then
+		UI.sound("Purchase", 0.45)
+	elseif kind == "event" then
+		UI.sound("Star", 0.4)
 	end
 	task.delay(3.2, function()
 		UI.tween(frame, UI.SMOOTH, { BackgroundTransparency = 1 })
@@ -386,6 +393,52 @@ local function build()
 	left:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 		goal.Position = UDim2.new(1, -12, 0, 8 + left.AbsoluteSize.Y + 8)
 	end)
+
+	-- Helper Rank (under the server goal): level, title and XP bar
+	rankFrame = UI.make("Frame", {
+		Position = UDim2.new(0, 0, 1, 6),
+		Size = UDim2.fromScale(1, 0.95),
+		BackgroundColor3 = Color3.fromRGB(40, 25, 30),
+		BackgroundTransparency = 0.25,
+		Parent = goal,
+	})
+	UI.corner(rankFrame, 12)
+	UI.stroke(rankFrame, T.Gold, 2)
+	local rankBar: Frame = UI.make("Frame", {
+		Size = UDim2.fromScale(0.92, 0.32),
+		Position = UDim2.fromScale(0.04, 0.58),
+		BackgroundColor3 = Color3.fromRGB(70, 50, 55),
+		Parent = rankFrame,
+	})
+	UI.corner(rankBar, 6)
+	rankFill = UI.make(
+		"Frame",
+		{ Size = UDim2.fromScale(0, 1), BackgroundColor3 = T.Gold, Parent = rankBar }
+	)
+	UI.corner(rankFill, 6)
+	rankLabel = UI.text({
+		Text = "Lv.1 Trainee Elf",
+		Size = UDim2.fromScale(0.94, 0.48),
+		Position = UDim2.fromScale(0.03, 0.04),
+		TextColor3 = T.Gold,
+		MaxTextSize = 18,
+		Parent = rankFrame,
+	})
+	UI.textStroke(rankLabel, T.Ink, 1.5)
+
+	-- Music on/off, tucked left of the server goal
+	musicButton = UI.button({
+		Text = "🎵",
+		Color = Color3.fromRGB(60, 50, 70),
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(0, -8, 0, 0),
+		Size = UDim2.fromOffset(40, 40),
+		Parent = goal,
+		MaxTextSize = 24,
+		OnClick = function()
+			Bus.fire("ToggleMusic")
+		end,
+	})
 	UI.corner(goal, 12)
 	UI.stroke(goal, T.Purple, 2)
 	goalLabel = UI.text({
@@ -479,6 +532,22 @@ local function onState(snapshot: any)
 		sackFill.BackgroundColor3 = T.Green
 	end
 	giftBadge.Visible = giftsAvailable(snapshot)
+
+	local rank = profile.rank or 1
+	local need = Economy.xpForRank(rank)
+	local stars = profile.stars or 0
+	rankLabel.Text = `Lv.{rank} {Economy.rankTitle(rank)}`
+		.. (if stars > 0 then `  ⭐{stars}` else "")
+	UI.tween(rankFill, UI.FAST, {
+		Size = UDim2.fromScale(
+			if rank >= Config.RANK.MAX then 1 else math.clamp((profile.xp or 0) / need, 0, 1),
+			1
+		),
+	})
+	if lastRank ~= 0 and rank > lastRank then
+		UI.pop(rankFrame, 1.25)
+	end
+	lastRank = rank
 end
 
 local function onHeartbeat()
@@ -556,6 +625,13 @@ function HUD.start()
 	Bus.on("FloatGain", function(text: string, color: Color3?)
 		HUD.floatGain(text, color)
 	end)
+	Bus.on("MusicMuted", function(muted: boolean)
+		UI.setButton(
+			musicButton,
+			if muted then "🔇" else "🎵",
+			if muted then T.Disabled else Color3.fromRGB(60, 50, 70)
+		)
+	end)
 
 	Net.on("Effect", function(payload)
 		if payload.kind == "Loaded" then
@@ -577,6 +653,8 @@ function HUD.start()
 			HUD.announce(`⭐ NEW SEASON #{payload.rebirths}! ⭐`, T.Gold)
 		elseif payload.kind == "Community" then
 			HUD.announce("🎉 SERVER GOAL REACHED! 🎉", Color3.fromRGB(200, 150, 255))
+		elseif payload.kind == "RankUp" then
+			HUD.announce(`🎖 RANK UP! Lv.{payload.rank} {payload.title}`, T.Gold)
 		end
 	end)
 

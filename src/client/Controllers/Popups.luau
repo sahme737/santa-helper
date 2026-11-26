@@ -8,6 +8,7 @@ local Format = require(Shared.Util.Format)
 local Lib = script.Parent.Parent:WaitForChild("Lib")
 local UI = require(Lib.UI)
 local Net = require(Lib.Net)
+local Bus = require(Lib.Bus)
 
 local Popups = {}
 
@@ -86,6 +87,9 @@ function Popups.init()
 end
 
 function Popups.start()
+	Bus.on("Confetti", function(amount: number?)
+		Popups.confetti(amount)
+	end)
 	Net.on("Offline", function(payload)
 		modal(
 			"Welcome back! 🎄",
@@ -106,6 +110,14 @@ function Popups.start()
 			Popups.confetti(60)
 		elseif payload.kind == "Built" then
 			Popups.confetti(25)
+		elseif payload.kind == "RankUp" then
+			Popups.confetti(50)
+			modal(
+				"🎖 Rank Up!",
+				`You are now Lv.{payload.rank}\n{payload.title}\n\n+2% Cheer forever · +{payload.snowflakes} ❄`,
+				"Let's go!",
+				T.Gold
+			)
 		end
 	end)
 end

@@ -132,16 +132,25 @@ function Economy.breakdown(profile: Profile, ctx: Context): Types.Breakdown
 
 	local elves = profile.elves * Config.ELVES.BONUS_EACH
 	local rebirth = profile.rebirths * Config.REBIRTH.BONUS_EACH
+	local rank = math.max(0, (profile.rank or 1) - 1) * Config.RANK.BONUS_EACH
 	local pass = if ctx.passes.DoubleCheer then 2 else 1
 	local boost = if profile.boostUntil > ctx.now then Config.BOOST_MULTIPLIER else 1
 
-	local total = base * (1 + decor) * (1 + elves) * (1 + pets) * (1 + rebirth) * pass * boost
+	local total = base
+		* (1 + decor)
+		* (1 + elves)
+		* (1 + pets)
+		* (1 + rebirth)
+		* (1 + rank)
+		* pass
+		* boost
 	return {
 		base = base,
 		decor = decor,
 		elves = elves,
 		pets = pets,
 		rebirth = rebirth,
+		rank = rank,
 		pass = pass,
 		boost = boost,
 		total = total,
@@ -176,12 +185,99 @@ function Economy.sleighStats(
 	}
 end
 
-function Economy.presentReward(profile: Profile, ctx: Context, combo: number): number
+function Economy.presentReward(
+	profile: Profile,
+	ctx: Context,
+	combo: number,
+	routeMultiplier: number?
+): number
 	local income = Economy.incomePerSecond(profile, ctx)
 	local base = math.max(Config.SLEIGH.MIN_REWARD, income * Config.SLEIGH.REWARD_INCOME_SECONDS)
 	local mult =
 		math.min(Config.SLEIGH.COMBO_MAX, 1 + Config.SLEIGH.COMBO_STEP * math.max(0, combo - 1))
-	return round(base * mult)
+	return round(base * mult * (routeMultiplier or 1))
+end
+
+--------------------------------------------------------------------------------
+-- Helper Rank
+--------------------------------------------------------------------------------
+
+-- XP needed to go from `rank` to `rank + 1`.
+function Economy.xpForRank(rank: number): number
+	return math.floor(Config.RANK.XP_BASE * Config.RANK.XP_GROWTH ^ (math.max(1, rank) - 1))
+end
+
+function Economy.rankTitle(rank: number): string
+	local title = Config.RANK.TITLES[1].title
+	for _, entry in Config.RANK.TITLES do
+		if rank >= entry.rank then
+			title = entry.title
+		end
+	end
+	return title
+end
+
+--------------------------------------------------------------------------------
+-- Delivery routes
+--------------------------------------------------------------------------------
+
+function Economy.routeDef(id: number): Config.RouteDef?
+	return Config.ROUTES[id]
+end
+
+function Economy.routeStars(profile: Profile, id: number): number
+	local record = profile.routes[tostring(id)]
+	return if record then record.stars else 0
+end
+
+function Economy.routeBest(profile: Profile, id: number): number
+	local record = profile.routes[tostring(id)]
+	return if record then record.best else 0
+end
+
+function Economy.routeUnlocked(profile: Profile, id: number): boolean
+	if id <= 1 then
+		return true
+	end
+	return Config.ROUTES[id] ~= nil and Economy.routeStars(profile, id - 1) >= 1
+end
+
+function Economy.totalStars(profile: Profile): number
+	local total = 0
+	for _, record in profile.routes do
+		total += record.stars
+	end
+	return total
+end
+
+-- Stars earned for delivering `count` presents on a route.
+function Economy.starsFor(def: Config.RouteDef, count: number): number
+	local stars = 0
+	for i, need in def.stars do
+		if count >= need then
+			stars = i
+		end
+	end
+	return stars
+end
+
+-- Which chimneys a route uses, out of `total` in the town. The choice is
+-- fixed per route so players can learn it. Returns chimney index -> kind.
+function Economy.routeHouses(def: Config.RouteDef, total: number): { [number]: string }
+	local order = table.create(total)
+	for i = 1, total do
+		order[i] = i
+	end
+	Random.new(4200 + def.id):Shuffle(order)
+	local houses: { [number]: string } = {}
+	local targets = math.min(def.houses, total)
+	for i = 1, targets do
+		houses[order[i]] = if i <= def.golden then "gold" else "gift"
+	end
+	for i = targets + 1, math.min(targets + def.coal, total) do
+		houses[order[i]] = "coal"
+	end
+	return houses
 end
 
 -- Weighted roll. `rng01` is a number in [0, 1).

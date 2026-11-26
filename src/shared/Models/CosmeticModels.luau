@@ -42,28 +42,58 @@ type HatBuilder = (model: Model, top: CFrame, size: number, def: Config.Cosmetic
 
 local hatBuilders: { [string]: HatBuilder } = {
 	SantaHat = function(model, top, size, def)
+		local fur = def.colorB
+		-- Thick fur brim with fluffy tufts all the way round
 		Build.cylinder(
 			model,
-			top * CFrame.new(0, 0.05 * size, 0) * CFrame.Angles(0, 0, math.rad(90)),
-			0.3 * size,
-			1.15 * size,
-			def.colorB
+			top * CFrame.new(0, 0.02 * size, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			0.34 * size,
+			1.42 * size,
+			fur,
+			Enum.Material.Fabric
 		)
-		local cone = Build.cone(
-			model,
-			top * CFrame.new(0, 0.15 * size, 0) * CFrame.Angles(math.rad(-15), 0, 0),
-			1.1 * size,
-			0.5 * size,
-			def.colorA,
-			5
-		)
-		cone.Parent = model
-		Build.ball(
-			model,
-			top * CFrame.Angles(math.rad(-15), 0, 0) * CFrame.new(0, 1.3 * size, 0),
-			0.35 * size,
-			def.colorB
-		)
+		for k = 0, 11 do
+			local a = k / 12 * math.pi * 2
+			Build.ball(
+				model,
+				top * CFrame.new(math.cos(a) * 0.66 * size, 0.02 * size, math.sin(a) * 0.66 * size),
+				(0.36 + (k % 3) * 0.04) * size,
+				fur,
+				Enum.Material.Fabric
+			)
+		end
+		-- Soft red cap that tapers, curls over and flops down one side
+		local bends = { 0, 6, 12, 20, 28, 34, 34 }
+		local segment = 0.25 * size
+		local cf = top * CFrame.new(0, 0.12 * size, 0) * CFrame.Angles(math.rad(-6), 0, 0)
+		for i, bend in bends do
+			local t0 = (i - 1) / #bends
+			local radius = (0.58 - 0.44 * t0) * size
+			cf *= CFrame.Angles(0, 0, math.rad(-bend))
+			Build.cylinder(
+				model,
+				cf * CFrame.new(0, segment / 2, 0) * CFrame.Angles(0, 0, math.rad(90)),
+				segment * 1.08,
+				radius * 2,
+				def.colorA,
+				Enum.Material.Fabric
+			)
+			-- A ball at every joint hides the seams where the cap bends.
+			Build.ball(model, cf, radius * 2, def.colorA, Enum.Material.Fabric)
+			cf *= CFrame.new(0, segment, 0)
+		end
+		-- Big fluffy pom-pom on the tip
+		Build.ball(model, cf * CFrame.new(0, 0.1 * size, 0), 0.5 * size, fur, Enum.Material.Fabric)
+		for k = 0, 5 do
+			local a = k / 6 * math.pi * 2
+			Build.ball(
+				model,
+				cf * CFrame.new(math.cos(a) * 0.16 * size, 0.1 * size, math.sin(a) * 0.16 * size),
+				0.3 * size,
+				fur,
+				Enum.Material.Fabric
+			)
+		end
 	end,
 	ElfHat = function(model, top, size, def)
 		Build.cylinder(

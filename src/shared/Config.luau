@@ -9,6 +9,7 @@ Config.GAME_NAME = "Santa's Little Helper"
 Config.DATASTORE_NAME = "SantasHelper_Profiles_v1"
 Config.LEADERBOARD_DELIVERED = "SantasHelper_Delivered_2026"
 Config.LEADERBOARD_CHEER = "SantasHelper_Cheer_2026"
+Config.LEADERBOARD_STARS = "SantasHelper_Stars_2026"
 
 Config.AUTOSAVE_INTERVAL = 60
 Config.STATE_PUSH_RATE = 0.25 -- seconds between client state pushes (max)
@@ -203,6 +204,108 @@ Config.SLEIGH = {
 	COMBO_STEP = 0.1, -- +10% per combo step
 	COMBO_MAX = 2.0,
 	LATENCY_SLACK = 8, -- studs of forgiveness for network delay
+}
+
+--------------------------------------------------------------------------------
+-- Delivery routes: the levels of the Sleigh Delivery game. Each route lights
+-- up a different set of houses and is harder than the last. Earning at least
+-- one star unlocks the next route; three stars needs upgrades and practice.
+--------------------------------------------------------------------------------
+export type RouteDef = {
+	id: number,
+	name: string,
+	emoji: string,
+	houses: number, -- chimneys lit on this route
+	stars: { number }, -- presents needed for 1, 2 and 3 stars
+	time: number, -- seconds before Night Length upgrades
+	reward: number, -- Cheer multiplier per present
+	coal: number, -- naughty houses: dropping there costs time and combo
+	golden: number, -- golden houses: triple Cheer and a snowflake
+	wind: number, -- sideways gust strength in studs/second
+	radius: number, -- drop range multiplier (lower = tighter aim)
+	fog: boolean, -- blizzard hides far-away houses
+	blurb: string,
+}
+
+local function route(
+	id: number,
+	name: string,
+	emoji: string,
+	houses: number,
+	stars: { number },
+	time: number,
+	reward: number,
+	coal: number,
+	golden: number,
+	wind: number,
+	radius: number,
+	fog: boolean,
+	blurb: string
+): RouteDef
+	return {
+		id = id,
+		name = name,
+		emoji = emoji,
+		houses = houses,
+		stars = stars,
+		time = time,
+		reward = reward,
+		coal = coal,
+		golden = golden,
+		wind = wind,
+		radius = radius,
+		fog = fog,
+		blurb = blurb,
+	}
+end
+
+-- stylua: ignore
+Config.ROUTES = {
+	--    id  name                 emoji  houses stars          time reward coal gold wind radius fog
+	route(1, "Snowy Lane",        "🏡", 18, { 4, 8, 12 },   60, 1.0, 0,  1, 0,  1.00, false, "A calm night to learn the reins."),
+	route(2, "Candy Cane Court",  "🍭", 20, { 6, 10, 14 },  60, 1.4, 3,  2, 0,  1.00, false, "Watch out for naughty houses!"),
+	route(3, "Gingerbread Row",   "🍪", 22, { 8, 12, 16 },  60, 1.9, 5,  2, 9,  1.00, false, "A breeze starts pushing the sleigh."),
+	route(4, "Frostbite Hills",   "🧊", 24, { 10, 14, 18 }, 55, 2.5, 6,  2, 13, 0.90, false, "Less time and smaller chimneys."),
+	route(5, "Blizzard Pass",     "🌨", 26, { 12, 16, 20 }, 55, 3.2, 8,  3, 15, 0.90, true,  "A blizzard hides the houses ahead."),
+	route(6, "Aurora Heights",    "🌌", 28, { 14, 19, 24 }, 50, 4.0, 10, 3, 17, 0.85, false, "Strong gusts under the northern lights."),
+	route(7, "Midnight Express",  "🚂", 30, { 16, 22, 27 }, 50, 5.0, 12, 3, 20, 0.80, true,  "Fast, foggy and full of coal."),
+	route(8, "North Pole Finale", "🎅", 34, { 19, 25, 31 }, 45, 6.5, 14, 4, 24, 0.75, true,  "Only legends finish Santa's own route."),
+} :: { RouteDef }
+
+Config.ROUTE = {
+	COAL_TIME_PENALTY = 4, -- seconds lost for dropping on a naughty house
+	GOLDEN_MULTIPLIER = 3,
+	STAR_SNOWFLAKES = 10, -- per new star, times the route number
+	XP_PER_PRESENT = 6, -- times the route number
+	XP_PER_STAR = 60, -- times the route number, first time only
+}
+
+--------------------------------------------------------------------------------
+-- Helper Rank: an account level. XP comes from everything you do; each rank
+-- gives a small permanent Cheer bonus and is shown above your head.
+--------------------------------------------------------------------------------
+Config.RANK = {
+	XP_BASE = 80, -- XP for rank 1 -> 2
+	XP_GROWTH = 1.22,
+	MAX = 60,
+	BONUS_EACH = 0.02, -- +2% Cheer per rank above 1
+	SNOWFLAKES_EACH = 5,
+	XP_LOAD = 4, -- loading the sleigh
+	XP_BUILD = 40, -- building a machine
+	XP_UPGRADE = 5,
+	XP_HATCH = 12,
+	XP_ELF = 15,
+	XP_REBIRTH = 400,
+	TITLES = {
+		{ rank = 1, title = "Trainee Elf" },
+		{ rank = 5, title = "Toy Tinkerer" },
+		{ rank = 10, title = "Gift Wrapper" },
+		{ rank = 15, title = "Sleigh Loader" },
+		{ rank = 20, title = "Reindeer Wrangler" },
+		{ rank = 30, title = "Chimney Champion" },
+		{ rank = 40, title = "Santa's Right Hand" },
+		{ rank = 50, title = "Christmas Legend" },
+	},
 }
 
 -------------------------------------------------------------------------------
@@ -735,15 +838,36 @@ Config.DEV_PRODUCTS = {
 Config.VIP_SNOWFLAKE_BONUS = 0.25
 
 -------------------------------------------------------------------------------
--- Sounds. Built-in engine sounds ship with every client. Add your own
--- licensed music ids from the Creator Store here (leave "" to disable).
--------------------------------------------------------------------------------
+-- Sounds. All ids are from Roblox's own account or the APM Music and Pro
+-- Sound Effects libraries on the Creator Store, which Roblox licenses for
+-- every experience. Set an entry to "" (or {}) to switch it off.
+--------------------------------------------------------------------------------
 Config.SOUNDS = {
-	Click = "rbxasset://sounds/button.wav",
-	Coin = "rbxasset://sounds/electronicpingshort.wav",
-	Pop = "rbxasset://sounds/clickfast.wav",
-	Music = "",
-	SleighMusic = "",
+	-- Interface
+	Click = "rbxassetid://15675059323",
+	Pop = "rbxassetid://15675055424",
+	Error = "rbxassetid://17208353912",
+	Whoosh = "rbxassetid://15675024286",
+	Drop = "rbxassetid://15675028888",
+	-- Rewards
+	Coin = "rbxassetid://9116394545",
+	Purchase = "rbxassetid://10066947742",
+	Star = "rbxassetid://9126073001",
+	Sparkle = "rbxassetid://9125635426",
+	LevelUp = "rbxassetid://1839901345",
+	Win = "rbxassetid://1845399641",
+	PartyHorn = "rbxassetid://9117240797",
+	-- Sleigh flight
+	SleighBells = "rbxassetid://1840228984",
+	Wind = "rbxassetid://9113203785",
+	Ticking = "rbxassetid://1839847326",
+}
+
+-- Music playlists: each track plays in turn.
+Config.MUSIC = {
+	Workshop = { "rbxassetid://9046738456", "rbxassetid://1838667764", "rbxassetid://9046740461" },
+	Sleigh = { "rbxassetid://1842909673", "rbxassetid://9047876673" },
+	VOLUME = 0.22,
 }
 
 -- UserIds allowed to use QA commands in live servers (Studio always allowed).

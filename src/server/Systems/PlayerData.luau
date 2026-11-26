@@ -48,6 +48,10 @@ local DEFAULT_PROFILE: Profile = {
 	receipts = {},
 	tutorialStep = 0,
 	createdAt = 0,
+	xp = 0,
+	rank = 1,
+	routes = {},
+	stars = 0,
 }
 
 -- Future schema changes: add MIGRATIONS[n] that upgrades version n to n + 1.

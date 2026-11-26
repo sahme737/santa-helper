@@ -26,6 +26,7 @@ local boards: { Board } = {
 		store = nil,
 	},
 	{ key = "Cheer", storeName = Config.LEADERBOARD_CHEER, field = "lifetimeCoins", store = nil },
+	{ key = "Stars", storeName = Config.LEADERBOARD_STARS, field = "stars", store = nil },
 }
 
 local lastSubmitted: { [Player]: { [string]: number } } = {}

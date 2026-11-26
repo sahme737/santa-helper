@@ -191,6 +191,34 @@ function PlayerState.addSnowflakes(
 	return math.floor(total)
 end
 
+-- Grants Helper Rank XP and handles rank-ups (snowflakes, popup, name tag).
+function PlayerState.addXp(player: Player, profile: Profile, amount: number)
+	if amount ~= amount or amount <= 0 or profile.rank >= Config.RANK.MAX then
+		return
+	end
+	profile.xp += math.floor(amount)
+	local ranked = false
+	while profile.rank < Config.RANK.MAX and profile.xp >= Economy.xpForRank(profile.rank) do
+		profile.xp -= Economy.xpForRank(profile.rank)
+		profile.rank += 1
+		ranked = true
+		PlayerState.addSnowflakes(player, profile, Config.RANK.SNOWFLAKES_EACH, false)
+	end
+	if profile.rank >= Config.RANK.MAX then
+		profile.xp = 0
+	end
+	if ranked then
+		Net.push(player, "Effect", {
+			kind = "RankUp",
+			rank = profile.rank,
+			title = Economy.rankTitle(profile.rank),
+			snowflakes = Config.RANK.SNOWFLAKES_EACH,
+		})
+		PlayerState.emit("rank", player)
+	end
+	PlayerState.dirty(player)
+end
+
 function PlayerState.addPet(
 	player: Player,
 	profile: Profile,
@@ -294,6 +322,10 @@ local function snapshot(player: Player, profile: Profile): { [string]: any }
 			tutorialStep = profile.tutorialStep,
 			createdAt = profile.createdAt,
 			version = profile.version,
+			xp = profile.xp,
+			rank = profile.rank,
+			routes = profile.routes,
+			stars = profile.stars,
 		},
 		passes = s.passes,
 		income = Economy.breakdown(profile, ctx),

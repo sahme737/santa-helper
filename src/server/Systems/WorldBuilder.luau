@@ -140,7 +140,7 @@ function WorldBuilder.pineTree(parent: Instance, base: CFrame, height: number, d
 			height * 0.36,
 			r,
 			GREEN,
-			3,
+			4,
 			Enum.Material.Grass
 		)
 		-- Snow cap
@@ -173,39 +173,109 @@ end
 -- Lighting
 --------------------------------------------------------------------------------
 local function buildLighting()
-	Lighting.ClockTime = 17.4
-	Lighting.Brightness = 2.2
-	Lighting.Ambient = Color3.fromRGB(95, 95, 125)
-	Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 185)
-	Lighting.EnvironmentDiffuseScale = 0.6
-	Lighting.EnvironmentSpecularScale = 0.6
+	-- A deep-blue winter dusk: bright enough to play in, dark enough that
+	-- every fairy light, lantern and window glows.
+	Lighting.ClockTime = 17.55
+	Lighting.Brightness = 2.4
+	Lighting.Ambient = Color3.fromRGB(88, 92, 132)
+	Lighting.OutdoorAmbient = Color3.fromRGB(138, 146, 196)
+	Lighting.ColorShift_Top = Color3.fromRGB(255, 196, 150)
+	Lighting.EnvironmentDiffuseScale = 0.75
+	Lighting.EnvironmentSpecularScale = 0.9
 	Lighting.GlobalShadows = true
+	Lighting.ShadowSoftness = 0.35
 	Lighting.GeographicLatitude = 60
+	Lighting.ExposureCompensation = 0.15
+
+	local sky = Instance.new("Sky")
+	sky.StarCount = 5000
+	sky.SunAngularSize = 14
+	sky.MoonAngularSize = 16
+	sky.CelestialBodiesShown = true
+	sky.Parent = Lighting
 
 	local atmosphere = Instance.new("Atmosphere")
-	atmosphere.Density = 0.32
-	atmosphere.Offset = 0.15
-	atmosphere.Color = Color3.fromRGB(200, 215, 255)
-	atmosphere.Decay = Color3.fromRGB(130, 110, 170)
-	atmosphere.Glare = 0.3
-	atmosphere.Haze = 1.4
+	atmosphere.Density = 0.3
+	atmosphere.Offset = 0.2
+	atmosphere.Color = Color3.fromRGB(190, 208, 255)
+	atmosphere.Decay = Color3.fromRGB(120, 100, 180)
+	atmosphere.Glare = 0.35
+	atmosphere.Haze = 1.6
 	atmosphere.Parent = Lighting
 
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.7
-	bloom.Size = 30
-	bloom.Threshold = 1.6
+	bloom.Intensity = 0.9
+	bloom.Size = 34
+	bloom.Threshold = 1.25
 	bloom.Parent = Lighting
 
 	local color = Instance.new("ColorCorrectionEffect")
-	color.Saturation = 0.15
-	color.Contrast = 0.05
-	color.TintColor = Color3.fromRGB(255, 246, 240)
+	color.Saturation = 0.22
+	color.Contrast = 0.1
+	color.Brightness = 0.02
+	color.TintColor = Color3.fromRGB(255, 244, 236)
 	color.Parent = Lighting
 
 	local sunRays = Instance.new("SunRaysEffect")
-	sunRays.Intensity = 0.04
+	sunRays.Intensity = 0.08
+	sunRays.Spread = 0.6
 	sunRays.Parent = Lighting
+
+	-- Only the far distance softens, which makes the world feel bigger.
+	local depth = Instance.new("DepthOfFieldEffect")
+	depth.FarIntensity = 0.18
+	depth.FocusDistance = 120
+	depth.InFocusRadius = 260
+	depth.NearIntensity = 0
+	depth.Parent = Lighting
+end
+
+-- Ribbons of northern lights arcing over a point.
+local function buildAurora(parent: Instance, centre: CFrame, radius: number, height: number)
+	local holder = Build.deco({
+		Name = "Aurora",
+		Size = Vector3.new(1, 1, 1),
+		CFrame = centre,
+		Transparency = 1,
+		Parent = parent,
+	})
+	local palettes = {
+		{ Color3.fromRGB(60, 255, 170), Color3.fromRGB(70, 190, 255) },
+		{ Color3.fromRGB(90, 255, 200), Color3.fromRGB(170, 110, 255) },
+		{ Color3.fromRGB(110, 150, 255), Color3.fromRGB(255, 120, 210) },
+	}
+	for i = 1, 6 do
+		local a = i / 6 * math.pi * 2 + rng:NextNumber(-0.3, 0.3)
+		local span = rng:NextNumber(0.9, 1.5)
+		local r = radius * rng:NextNumber(0.75, 1.1)
+		local y = height * rng:NextNumber(0.85, 1.2)
+		local a0 = Instance.new("Attachment")
+		a0.Position = Vector3.new(math.cos(a) * r, y, math.sin(a) * r)
+		a0.Parent = holder
+		local a1 = Instance.new("Attachment")
+		a1.Position = Vector3.new(math.cos(a + span) * r, y * 1.05, math.sin(a + span) * r)
+		a1.Parent = holder
+		local pair = palettes[(i - 1) % #palettes + 1]
+		local beam = Instance.new("Beam")
+		beam.Attachment0 = a0
+		beam.Attachment1 = a1
+		beam.Color = ColorSequence.new(pair[1], pair[2])
+		beam.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.25, 0.55),
+			NumberSequenceKeypoint.new(0.75, 0.6),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+		beam.LightEmission = 1
+		beam.LightInfluence = 0
+		beam.Width0 = height * 0.35
+		beam.Width1 = height * 0.5
+		beam.CurveSize0 = r * 0.5
+		beam.CurveSize1 = -r * 0.5
+		beam.Segments = 24
+		beam.FaceCamera = true
+		beam.Parent = holder
+	end
 end
 
 --------------------------------------------------------------------------------
@@ -749,8 +819,9 @@ local function buildLeaderboards(hub: Instance)
 	model.Name = "Leaderboards"
 	for i, info in
 		{
-			{ key = "Delivered", title = "🎁 Top Present Deliverers", angle = 170 },
-			{ key = "Cheer", title = "⭐ Merriest Workshops", angle = 190 },
+			{ key = "Stars", title = "🌟 Route Star Champions", angle = 160 },
+			{ key = "Delivered", title = "🎁 Top Present Deliverers", angle = 180 },
+			{ key = "Cheer", title = "⭐ Merriest Workshops", angle = 200 },
 		}
 	do
 		local cf = hubCF(info.angle, 180)
@@ -764,7 +835,7 @@ local function buildLeaderboards(hub: Instance)
 		Build.deco({
 			Size = Vector3.new(28, 32, 0.6),
 			CFrame = cf * CFrame.new(0, 18, 0.6),
-			Color = if i == 1 then RED else GOLD,
+			Color = if i == 2 then RED else GOLD,
 			Parent = model,
 		})
 		Build.part({
@@ -899,6 +970,122 @@ end
 --------------------------------------------------------------------------------
 -- Sleigh model (shared by runway, plots and delivery runs)
 --------------------------------------------------------------------------------
+-- Santa's gift bag: a plump red velvet sack with a white fur collar, tied
+-- with gold rope and overflowing with wrapped presents. `base` is the bottom
+-- centre of the bag and `d` its diameter.
+local function giftBag(model: Model, base: CFrame, d: number, presents: number)
+	local velvet = Color3.fromRGB(170, 22, 34)
+	local fur = Color3.fromRGB(250, 250, 255)
+	Build.ball(model, base * CFrame.new(0, d * 0.46, 0), d, velvet, Enum.Material.Fabric).Name =
+		"Sack"
+	Build.ball(model, base * CFrame.new(0, d * 0.82, 0), d * 0.78, velvet, Enum.Material.Fabric)
+	-- Lumps where presents push against the cloth
+	for k = 0, 4 do
+		local a = k / 5 * math.pi * 2 + 0.4
+		Build.ball(
+			model,
+			base
+				* CFrame.new(
+					math.cos(a) * d * 0.3,
+					d * (0.38 + (k % 2) * 0.2),
+					math.sin(a) * d * 0.3
+				),
+			d * 0.5,
+			velvet,
+			Enum.Material.Fabric
+		)
+	end
+	-- Fur collar
+	local collarY = d * 1.14
+	Build.cylinder(
+		model,
+		base * CFrame.new(0, collarY, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		d * 0.2,
+		d * 0.74,
+		fur,
+		Enum.Material.Fabric
+	)
+	for k = 0, 9 do
+		local a = k / 10 * math.pi * 2
+		Build.ball(
+			model,
+			base * CFrame.new(math.cos(a) * d * 0.36, collarY, math.sin(a) * d * 0.36),
+			d * 0.22,
+			fur,
+			Enum.Material.Fabric
+		)
+	end
+	-- Gold rope with tassels
+	Build.cylinder(
+		model,
+		base * CFrame.new(0, collarY - d * 0.13, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		d * 0.06,
+		d * 0.7,
+		GOLD,
+		Enum.Material.Metal
+	)
+	for _, x in { -0.08, 0.08 } do
+		Build.ball(
+			model,
+			base * CFrame.new(x * d, collarY - d * 0.3, -d * 0.4),
+			d * 0.12,
+			GOLD,
+			Enum.Material.Metal
+		)
+	end
+	-- Presents spilling out of the top
+	local bagRng = Random.new(7)
+	for k = 1, presents do
+		local a = k / presents * math.pi * 2
+		local ring = if k <= 2 then 0.06 else 0.24
+		local size = d * bagRng:NextNumber(0.26, 0.38)
+		local p = ToyModels.present(size, k)
+		p:PivotTo(
+			base
+				* CFrame.new(
+					math.cos(a) * d * ring,
+					collarY + d * (if k <= 2 then 0.34 else 0.08) + bagRng:NextNumber(0, d * 0.1),
+					math.sin(a) * d * ring
+				)
+				* CFrame.Angles(
+					math.rad(bagRng:NextNumber(-28, 28)),
+					math.rad(bagRng:NextNumber(0, 360)),
+					math.rad(bagRng:NextNumber(-28, 28))
+				)
+		)
+		p.Parent = model
+	end
+	-- A candy cane and a teddy poking out
+	candyPole(
+		model,
+		base
+			* CFrame.new(d * 0.2, collarY, d * 0.22)
+			* CFrame.Angles(math.rad(14), 0, math.rad(-16)),
+		d * 0.75,
+		d * 0.09
+	)
+	local bear = Color3.fromRGB(176, 122, 72)
+	local bearCF = base * CFrame.new(-d * 0.28, collarY + d * 0.3, d * 0.1)
+	Build.ball(model, bearCF, d * 0.3, bear, Enum.Material.Fabric)
+	for _, x in { -0.12, 0.12 } do
+		Build.ball(
+			model,
+			bearCF * CFrame.new(x * d, d * 0.13, 0),
+			d * 0.12,
+			bear,
+			Enum.Material.Fabric
+		)
+	end
+	Build.ball(
+		model,
+		bearCF * CFrame.new(0, -d * 0.03, -d * 0.13),
+		d * 0.12,
+		Color3.fromRGB(235, 205, 160),
+		Enum.Material.Fabric
+	)
+end
+
+-- `compact` is the flying version: a lower bag so the camera can see over it.
 function WorldBuilder.sleighModel(scale: number, compact: boolean?): Model
 	local s = scale
 	local model = Instance.new("Model")
@@ -911,8 +1098,8 @@ function WorldBuilder.sleighModel(scale: number, compact: boolean?): Model
 		Parent = model,
 	})
 	model.PrimaryPart = root
-	local function box(size: Vector3, cf: CFrame, color: Color3, mat: Enum.Material?)
-		Build.deco({
+	local function box(size: Vector3, cf: CFrame, color: Color3, mat: Enum.Material?): Part
+		return Build.deco({
 			Size = size * s,
 			CFrame = CFrame.new(cf.Position * s) * cf.Rotation,
 			Color = color,
@@ -920,36 +1107,125 @@ function WorldBuilder.sleighModel(scale: number, compact: boolean?): Model
 			Parent = model,
 		})
 	end
-	box(Vector3.new(6, 2.5, 8), CFrame.new(0, 2.2, 0.5), RED)
+	local DARK_RED = Color3.fromRGB(120, 20, 30)
+	local FUR = Color3.fromRGB(250, 250, 255)
+	-- Body: glossy red shell with gold trim
+	for _, part in
+		{
+			box(Vector3.new(6, 2.5, 8), CFrame.new(0, 2.2, 0.5), RED),
+			box(Vector3.new(6, 3.5, 1.2), CFrame.new(0, 3.5, 4.2), RED),
+			box(
+				Vector3.new(6, 1.6, 1.4),
+				CFrame.new(0, 2.2, -4) * CFrame.Angles(math.rad(-25), 0, 0),
+				RED
+			),
+			box(
+				Vector3.new(6, 1.4, 1.2),
+				CFrame.new(0, 3.2, -4.7) * CFrame.Angles(math.rad(-60), 0, 0),
+				RED
+			),
+		}
+	do
+		part.Reflectance = 0.12
+	end
 	box(Vector3.new(6.2, 0.5, 8.2), CFrame.new(0, 3.5, 0.5), GOLD, Enum.Material.Metal)
-	box(Vector3.new(6, 3.5, 1.2), CFrame.new(0, 3.5, 4.2), RED)
-	box(Vector3.new(6, 1.6, 1.4), CFrame.new(0, 2.2, -4) * CFrame.Angles(math.rad(-25), 0, 0), RED)
-	box(Vector3.new(5, 0.6, 1), CFrame.new(0, 2.5, 1.5), Color3.fromRGB(120, 30, 40))
+	box(Vector3.new(6.3, 0.45, 1.5), CFrame.new(0, 5.3, 4.2), GOLD, Enum.Material.Metal)
+	-- Fur trim along the back board, plush bench
+	box(Vector3.new(6.4, 0.5, 1.6), CFrame.new(0, 5.65, 4.2), FUR, Enum.Material.Fabric)
+	box(Vector3.new(5, 0.6, 1.6), CFrame.new(0, 2.5, 1.2), DARK_RED, Enum.Material.Fabric)
+	-- Gold scrollwork and a star on each side
+	for _, x in { -3.06, 3.06 } do
+		box(Vector3.new(0.12, 0.3, 6.4), CFrame.new(x, 2.6, 0.5), GOLD, Enum.Material.Metal)
+		box(Vector3.new(0.12, 0.3, 6.4), CFrame.new(x, 1.5, 0.5), GOLD, Enum.Material.Metal)
+		Build.ball(
+			model,
+			CFrame.new(x * s, 2.05 * s, 0.5 * s),
+			0.9 * s,
+			Color3.fromRGB(255, 225, 120),
+			Enum.Material.Neon
+		)
+	end
+	-- Runners with curled tips
 	for _, x in { -2.6, 2.6 } do
 		box(Vector3.new(0.4, 0.4, 10), CFrame.new(x, 0.3, 0), GOLD, Enum.Material.Metal)
 		box(Vector3.new(0.4, 2.0, 0.4), CFrame.new(x, 1.0, -2.8), GOLD, Enum.Material.Metal)
 		box(Vector3.new(0.4, 2.0, 0.4), CFrame.new(x, 1.0, 2.8), GOLD, Enum.Material.Metal)
 		box(
 			Vector3.new(0.4, 1.5, 0.4),
-			CFrame.new(x, 1.0, -5.2) * CFrame.Angles(math.rad(-50), 0, 0),
+			CFrame.new(x, 0.8, -5.4) * CFrame.Angles(math.rad(-50), 0, 0),
 			GOLD,
 			Enum.Material.Metal
 		)
+		box(
+			Vector3.new(0.4, 1.3, 0.4),
+			CFrame.new(x, 1.75, -6.0) * CFrame.Angles(math.rad(-12), 0, 0),
+			GOLD,
+			Enum.Material.Metal
+		)
+		box(
+			Vector3.new(0.4, 1.0, 0.4),
+			CFrame.new(x, 2.55, -5.75) * CFrame.Angles(math.rad(50), 0, 0),
+			GOLD,
+			Enum.Material.Metal
+		)
+		-- Lantern on a post at each front corner
+		box(Vector3.new(0.25, 1.6, 0.25), CFrame.new(x, 4.3, -3.4), GOLD, Enum.Material.Metal)
+		local lantern = Build.ball(
+			model,
+			CFrame.new(x * s, 5.3 * s, -3.4 * s),
+			0.8 * s,
+			Color3.fromRGB(255, 220, 150),
+			Enum.Material.Neon
+		)
+		Build.light(lantern, WARM_LIGHT, 14 * s, 1.2)
+		-- Sparkle dust off the back of each runner (switched on in flight)
+		local dust =
+			box(Vector3.new(0.4, 0.4, 0.4), CFrame.new(x, 0.3, 5), GOLD, Enum.Material.Neon)
+		dust.Name = "RunnerDust"
+		local sparkle = Instance.new("ParticleEmitter")
+		sparkle.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		sparkle.Color = ColorSequence.new(Color3.fromRGB(255, 235, 170), Color3.new(1, 1, 1))
+		sparkle.LightEmission = 1
+		sparkle.Size = NumberSequence.new(1.1 * s, 0)
+		sparkle.Lifetime = NumberRange.new(0.8, 1.4)
+		sparkle.Rate = if compact then 28 else 3
+		sparkle.Speed = NumberRange.new(1, 4)
+		sparkle.SpreadAngle = Vector2.new(25, 25)
+		sparkle.Parent = dust
 	end
-	-- Sack of presents in the back
-	local sackSize = if compact then 2 else 3.6
-	local sackY = if compact then 4.4 else 5.5
-	local sack = Build.ball(
-		model,
-		CFrame.new(0, sackY * s, 3 * s),
-		sackSize * s,
-		Color3.fromRGB(150, 100, 60),
-		Enum.Material.Fabric
-	)
-	sack.Name = "Sack"
-	local p = ToyModels.present((if compact then 1 else 1.4) * s, 1)
-	p:PivotTo(CFrame.new(1.2 * s, (sackY + sackSize * 0.3) * s, 2.6 * s))
-	p.Parent = model
+	-- Holly on the front
+	for i, x in { -0.5, 0.5, 0 } do
+		Build.ball(
+			model,
+			CFrame.new(x * s, (3.75 + (if i == 3 then 0.35 else 0)) * s, -4.75 * s),
+			0.5 * s,
+			Color3.fromRGB(220, 30, 40),
+			Enum.Material.Neon
+		)
+	end
+	box(Vector3.new(2.2, 0.2, 0.9), CFrame.new(0, 3.55, -4.6), GREEN, Enum.Material.Fabric)
+
+	-- The gift bag in the back, plus loose presents stacked around it
+	if compact then
+		giftBag(model, CFrame.new(0, 3.0 * s, 3.0 * s), 2.5 * s, 6)
+	else
+		giftBag(model, CFrame.new(0, 3.2 * s, 2.4 * s), 3.7 * s, 9)
+	end
+	local loose = if compact
+		then { { -2.1, 3.75, 3.4, 0.9 }, { 2.1, 3.75, 3.4, 0.9 }, { -2.2, 3.75, 2.2, 0.7 } }
+		else {
+			{ -2.2, 3.75, 3.3, 1.1 },
+			{ 2.2, 3.75, 3.3, 1.2 },
+			{ -2.2, 3.75, -0.6, 1.0 },
+			{ 2.2, 3.75, -0.4, 0.9 },
+			{ 2.1, 3.75, 0.8, 0.7 },
+			{ -2.1, 3.75, 0.6, 0.8 },
+		}
+	for k, info in loose do
+		local p = ToyModels.present(info[4] * s, k + 2)
+		p:PivotTo(CFrame.new(info[1] * s, info[2] * s, info[3] * s) * CFrame.Angles(0, k * 0.7, 0))
+		p.Parent = model
+	end
 	return model
 end
 
@@ -1080,11 +1356,20 @@ local function buildPlot(plots: Instance, index: number): Model
 		Shape = Enum.PartType.Ball,
 		Size = Vector3.new(7, 7, 7),
 		CFrame = at(CFrame.new(sx, 4.5, PlotLayout.BELT_Z)),
-		Color = Color3.fromRGB(160, 110, 65),
+		Color = Color3.fromRGB(170, 22, 34),
 		Material = Enum.Material.Fabric,
 		CanCollide = false,
 		Parent = model,
 	})
+	for k = 1, 7 do
+		local a = k / 7 * math.pi * 2
+		local p = ToyModels.present(1.4 + (k % 3) * 0.5, k)
+		p:PivotTo(
+			at(CFrame.new(sx + math.cos(a) * 6.2, 1, PlotLayout.BELT_Z + math.sin(a) * 6.2))
+				* CFrame.Angles(0, a * 1.7, 0)
+		)
+		p.Parent = model
+	end
 	Build.billboard(
 		sack,
 		"Sack 0%",
@@ -1206,6 +1491,12 @@ end
 --------------------------------------------------------------------------------
 -- Sleigh delivery town
 --------------------------------------------------------------------------------
+local HOUSE_MATERIALS = {
+	Enum.Material.Plaster,
+	Enum.Material.Brick,
+	Enum.Material.WoodPlanks,
+	Enum.Material.Plaster,
+}
 local HOUSE_COLORS = {
 	Color3.fromRGB(245, 230, 200),
 	Color3.fromRGB(190, 220, 245),
@@ -1231,8 +1522,16 @@ local function buildHouse(parent: Instance, base: CFrame, index: number)
 		Size = Vector3.new(w, h, d),
 		CFrame = base * CFrame.new(0, h / 2, 0),
 		Color = HOUSE_COLORS[rng:NextInteger(1, #HOUSE_COLORS)],
-		Material = Enum.Material.SmoothPlastic,
+		Material = HOUSE_MATERIALS[rng:NextInteger(1, #HOUSE_MATERIALS)],
 		CanCollide = false,
+		Parent = model,
+	})
+	-- Stone footing
+	Build.deco({
+		Size = Vector3.new(w + 0.6, 2, d + 0.6),
+		CFrame = base * CFrame.new(0, 1, 0),
+		Color = Color3.fromRGB(120, 122, 135),
+		Material = Enum.Material.Cobblestone,
 		Parent = model,
 	})
 	local roofColor = ROOF_COLORS[rng:NextInteger(1, #ROOF_COLORS)]
@@ -1248,6 +1547,7 @@ local function buildHouse(parent: Instance, base: CFrame, index: number)
 			Size = Vector3.new(w + 2, 1.2, roofLen),
 			CFrame = cf,
 			Color = roofColor,
+			Material = Enum.Material.Slate,
 			Parent = model,
 		})
 		Build.deco({
@@ -1287,14 +1587,77 @@ local function buildHouse(parent: Instance, base: CFrame, index: number)
 	WorldBuilder.chimneys[index] = marker.Position
 	-- Windows and door
 	for _, x in { -w / 4, w / 4 } do
-		Build.deco({
+		local glass = Build.deco({
 			Size = Vector3.new(4, 4, 0.4),
 			CFrame = base * CFrame.new(x, h * 0.6, -d / 2 - 0.1),
 			Color = WARM_LIGHT,
 			Material = Enum.Material.Neon,
 			Parent = model,
 		})
+		-- White frame, cross bars and a snowy sill
+		Build.deco({
+			Size = Vector3.new(4.8, 4.8, 0.3),
+			CFrame = glass.CFrame * CFrame.new(0, 0, 0.1),
+			Color = Color3.fromRGB(245, 245, 250),
+			Parent = model,
+		})
+		Build.deco({
+			Size = Vector3.new(0.3, 4, 0.5),
+			CFrame = glass.CFrame,
+			Color = Color3.fromRGB(245, 245, 250),
+			Parent = model,
+		})
+		Build.deco({
+			Size = Vector3.new(4, 0.3, 0.5),
+			CFrame = glass.CFrame,
+			Color = Color3.fromRGB(245, 245, 250),
+			Parent = model,
+		})
+		Build.deco({
+			Size = Vector3.new(5.2, 0.6, 1.2),
+			CFrame = glass.CFrame * CFrame.new(0, -2.6, -0.3),
+			Color = SNOW,
+			Material = Enum.Material.Snow,
+			Parent = model,
+		})
 	end
+	-- Warm light spilling onto the snow out front
+	local glowPart = Build.deco({
+		Size = Vector3.new(1, 1, 1),
+		CFrame = base * CFrame.new(0, h * 0.55, -d / 2 - 3),
+		Transparency = 1,
+		Parent = model,
+	})
+	Build.light(glowPart, WARM_LIGHT, 34, 1.6)
+	-- Chimney smoke and a snow cap
+	local smokePart = Build.deco({
+		Size = Vector3.new(2, 0.4, 2),
+		CFrame = base * CFrame.new(cx, chimneyTop + 1, -half / 3),
+		Transparency = 1,
+		Parent = model,
+	})
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	smoke.Color = ColorSequence.new(Color3.fromRGB(235, 235, 245))
+	smoke.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.6),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	smoke.Size = NumberSequence.new(2.5, 7)
+	smoke.Lifetime = NumberRange.new(3, 5)
+	smoke.Rate = 2.5
+	smoke.Speed = NumberRange.new(3, 5)
+	smoke.SpreadAngle = Vector2.new(12, 12)
+	smoke.Acceleration = Vector3.new(2, 0, 0)
+	smoke.Parent = smokePart
+	Build.deco({
+		Size = Vector3.new(5.2, 0.5, 5.2),
+		CFrame = base * CFrame.new(cx, chimneyTop + 0.2, -half / 3),
+		Color = SNOW,
+		Material = Enum.Material.Snow,
+		Transparency = 0,
+		Parent = model,
+	})
 	Build.deco({
 		Size = Vector3.new(4.5, 7, 0.4),
 		CFrame = base * CFrame.new(0, 3.5, -d / 2 - 0.1),
@@ -1302,6 +1665,13 @@ local function buildHouse(parent: Instance, base: CFrame, index: number)
 		Parent = model,
 	})
 	Build.ball(model, base * CFrame.new(0, 8.5, -d / 2 - 0.4), 2.2, Color3.fromRGB(40, 140, 60))
+	Build.ball(
+		model,
+		base * CFrame.new(0, 7.6, -d / 2 - 1.1),
+		0.8,
+		Color3.fromRGB(220, 30, 40),
+		Enum.Material.Neon
+	)
 	-- String lights along the roof edge
 	for k = 0, 6 do
 		Build.ball(
@@ -1413,6 +1783,8 @@ function WorldBuilder.init()
 	end
 
 	buildTown(world)
+	buildAurora(world, CFrame.new(0, 0, 0), 900, 420)
+	buildAurora(world, WorldBuilder.TOWN_ORIGIN, 900, 420)
 
 	folder("Pets", workspace)
 	folder("Drops", workspace)

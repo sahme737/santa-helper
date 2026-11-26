@@ -89,7 +89,8 @@ local function playHatch(eggId: string, petId: string, golden: boolean)
 	})
 	eggFrame:Destroy()
 	UI.tween(flash, TweenInfo.new(0.6), { BackgroundTransparency = 1 })
-	UI.sound("Coin", 0.6, 1.4)
+	UI.sound("Sparkle", 0.6)
+	UI.sound("Win", 0.5)
 
 	local holder: Frame = UI.make("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),

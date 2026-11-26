@@ -156,7 +156,7 @@ function UI.sound(name: string, volume: number?, pitch: number?)
 	s.Ended:Once(function()
 		s:Destroy()
 	end)
-	task.delay(5, function()
+	task.delay(12, function()
 		if s.Parent then
 			s:Destroy()
 		end
