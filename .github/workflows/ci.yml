@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        uses: CompeyDev/setup-rokit@v0.1.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check formatting
+        run: stylua --check src
+
+      - name: Generate Roblox std
+        run: selene generate-roblox-std
+
+      - name: Lint
+        run: selene src
+
+      - name: Build place file
+        run: rojo build default.project.json -o SantasLittleHelper.rbxl
