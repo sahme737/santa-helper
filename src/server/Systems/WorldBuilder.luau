@@ -185,7 +185,7 @@ local function buildLighting()
 	Lighting.GlobalShadows = true
 	Lighting.ShadowSoftness = 0.35
 	Lighting.GeographicLatitude = 60
-	Lighting.ExposureCompensation = 0.15
+	Lighting.ExposureCompensation = 0
 
 	local sky = Instance.new("Sky")
 	sky.StarCount = 5000
@@ -204,9 +204,9 @@ local function buildLighting()
 	atmosphere.Parent = Lighting
 
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.9
-	bloom.Size = 34
-	bloom.Threshold = 1.25
+	bloom.Intensity = 0.6
+	bloom.Size = 30
+	bloom.Threshold = 1.7
 	bloom.Parent = Lighting
 
 	local color = Instance.new("ColorCorrectionEffect")
@@ -1126,7 +1126,7 @@ function WorldBuilder.sleighModel(scale: number, compact: boolean?): Model
 			),
 		}
 	do
-		part.Reflectance = 0.12
+		part.Reflectance = 0.05
 	end
 	box(Vector3.new(6.2, 0.5, 8.2), CFrame.new(0, 3.5, 0.5), GOLD, Enum.Material.Metal)
 	box(Vector3.new(6.3, 0.45, 1.5), CFrame.new(0, 5.3, 4.2), GOLD, Enum.Material.Metal)
@@ -1177,7 +1177,7 @@ function WorldBuilder.sleighModel(scale: number, compact: boolean?): Model
 			Color3.fromRGB(255, 220, 150),
 			Enum.Material.Neon
 		)
-		Build.light(lantern, WARM_LIGHT, 14 * s, 1.2)
+		Build.light(lantern, WARM_LIGHT, 9 * s, 0.45)
 		-- Sparkle dust off the back of each runner (switched on in flight)
 		local dust =
 			box(Vector3.new(0.4, 0.4, 0.4), CFrame.new(x, 0.3, 5), GOLD, Enum.Material.Neon)

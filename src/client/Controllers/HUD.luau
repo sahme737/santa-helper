@@ -354,6 +354,10 @@ local function build()
 		Parent = screen,
 	})
 	UI.make("UISizeConstraint", { MaxSize = Vector2.new(520, 110), Parent = top })
+	-- The flight HUD takes this spot while the sleigh is in the air.
+	Bus.on("Flying", function(flying: boolean)
+		top.Visible = not flying
+	end)
 	bannerLabel = UI.text({
 		Text = "",
 		Size = UDim2.fromScale(1, 0.38),

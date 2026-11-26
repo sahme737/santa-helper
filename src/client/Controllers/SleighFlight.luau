@@ -252,9 +252,11 @@ local function stopFlight()
 	end
 	local camera = workspace.CurrentCamera
 	if camera then
+		camera.CameraType = Enum.CameraType.Custom
 		UI.tween(camera, UI.SMOOTH, { FieldOfView = f.baseFov })
 	end
 	hud.Visible = false
+	Bus.fire("Flying", false)
 	Bus.fire("FlightAudio", { flying = false, wind = 0, hurry = false })
 end
 
@@ -383,6 +385,23 @@ local function step(dt: number)
 	local throttle = 1 - math.clamp(move.Z, -1, 1) * 0.35 -- W speeds up, S slows down
 	local speed = f.speed * throttle
 	local look = Vector3.new(-math.sin(f.yaw), 0, -math.cos(f.yaw))
+
+	-- Chase camera: sits behind and above the sleigh and looks ahead and down,
+	-- so the chimneys coming up are always in view.
+	local cam = workspace.CurrentCamera
+	if cam then
+		local pos = f.root.Position
+		local goal = CFrame.lookAt(
+			pos - look * 30 + Vector3.new(0, 15, 0),
+			pos + look * 34 - Vector3.new(0, 8, 0)
+		)
+		if cam.CameraType ~= Enum.CameraType.Scriptable then
+			cam.CameraType = Enum.CameraType.Scriptable
+			cam.CFrame = goal
+		else
+			cam.CFrame = cam.CFrame:Lerp(goal, math.min(1, dt * 6))
+		end
+	end
 	local targetY = f.townOrigin.Y + f.altitude
 	local climb = math.clamp((targetY - f.root.Position.Y) * 2, -30, 30)
 
@@ -519,6 +538,7 @@ function SleighFlight.begin(routeId: number)
 		UI.tween(camera, UI.SMOOTH, { FieldOfView = 82 })
 	end
 	UI.sound("Whoosh", 0.6)
+	Bus.fire("Flying", true)
 	Bus.fire("FlightAudio", { flying = true, wind = def.wind / 24, hurry = false })
 	Bus.fire(
 		"Announce",
@@ -668,7 +688,7 @@ function SleighFlight.init()
 	})
 	local bar: Frame = UI.make("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.fromScale(0.5, 0.13),
+		Position = UDim2.fromScale(0.5, 0.075),
 		Size = UDim2.fromScale(0.4, 0.045),
 		BackgroundColor3 = Color3.fromRGB(30, 30, 60),
 		Parent = hud,
@@ -692,8 +712,8 @@ function SleighFlight.init()
 	routeLabel = UI.text({
 		Text = "",
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.fromScale(0.5, 0.125),
-		Size = UDim2.fromScale(0.4, 0.035),
+		Position = UDim2.fromScale(0.5, 0.07),
+		Size = UDim2.fromScale(0.4, 0.04),
 		MaxTextSize = 20,
 		Parent = hud,
 	})
@@ -701,7 +721,7 @@ function SleighFlight.init()
 	countLabel = UI.text({
 		Text = "",
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.fromScale(0.495, 0.185),
+		Position = UDim2.fromScale(0.495, 0.13),
 		Size = UDim2.fromScale(0.2, 0.05),
 		TextXAlignment = Enum.TextXAlignment.Right,
 		MaxTextSize = 30,
@@ -710,7 +730,7 @@ function SleighFlight.init()
 	UI.textStroke(countLabel, T.Ink, 2)
 	starLabel = UI.text({
 		Text = "",
-		Position = UDim2.fromScale(0.505, 0.185),
+		Position = UDim2.fromScale(0.505, 0.13),
 		Size = UDim2.fromScale(0.24, 0.05),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = GOLD_COLOR,
@@ -733,7 +753,7 @@ function SleighFlight.init()
 	local windHolder: Frame = UI.make("Frame", {
 		BackgroundTransparency = 1,
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.27),
+		Position = UDim2.fromScale(0.5, 0.24),
 		Size = UDim2.fromOffset(64, 64),
 		Parent = hud,
 	})

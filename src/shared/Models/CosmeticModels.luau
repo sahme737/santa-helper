@@ -47,8 +47,8 @@ local hatBuilders: { [string]: HatBuilder } = {
 		Build.cylinder(
 			model,
 			top * CFrame.new(0, 0.02 * size, 0) * CFrame.Angles(0, 0, math.rad(90)),
-			0.34 * size,
-			1.42 * size,
+			0.36 * size,
+			1.5 * size,
 			fur,
 			Enum.Material.Fabric
 		)
@@ -56,7 +56,7 @@ local hatBuilders: { [string]: HatBuilder } = {
 			local a = k / 12 * math.pi * 2
 			Build.ball(
 				model,
-				top * CFrame.new(math.cos(a) * 0.66 * size, 0.02 * size, math.sin(a) * 0.66 * size),
+				top * CFrame.new(math.cos(a) * 0.72 * size, 0.02 * size, math.sin(a) * 0.72 * size),
 				(0.36 + (k % 3) * 0.04) * size,
 				fur,
 				Enum.Material.Fabric
