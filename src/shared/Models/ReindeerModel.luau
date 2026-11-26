@@ -52,17 +52,25 @@ function ReindeerModel.build(petId: string, golden: boolean, scale: number?): Mo
 	-- Torso + belly
 	box("Body", Vector3.new(1.6, 1.3, 2.6), at(0, 1.9, 0), body)
 	box("Belly", Vector3.new(1.3, 0.4, 2.0), at(0, 1.25, 0), accent)
-	-- Legs
+	-- Legs. Each leg part records its hip (in Root space) and gait phase so
+	-- ReindeerAnim can swing it; diagonal pairs move together.
 	for _, x in { -0.55, 0.55 } do
 		for _, z in { -0.9, 0.9 } do
-			box("Leg", Vector3.new(0.4, 1.2, 0.4), at(x, 0.7, z), body)
-			box(
+			local leg = box("Leg", Vector3.new(0.4, 1.2, 0.4), at(x, 0.7, z), body)
+			local hoof = box(
 				"Hoof",
 				Vector3.new(0.45, 0.25, 0.45),
 				at(x, 0.12, z),
 				Color3.fromRGB(50, 35, 30),
 				Enum.Material.SmoothPlastic
 			)
+			local hip = Vector3.new(x * s, (1.3 - 0.5) * s, z * s)
+			local diagonal = (x > 0) == (z > 0)
+			for _, part in { leg, hoof } do
+				part:SetAttribute("Hip", hip)
+				part:SetAttribute("Phase", if diagonal then 0 else math.pi)
+				part:SetAttribute("Front", z < 0)
+			end
 		end
 	end
 	-- Neck and head
@@ -147,6 +155,39 @@ function ReindeerModel.build(petId: string, golden: boolean, scale: number?): Mo
 		Enum.Material.SmoothPlastic
 	)
 	Build.ball(model, at(0, 2.25, -1.5), 0.3 * s, Color3.fromRGB(255, 210, 60), Enum.Material.Metal)
+	-- Harness: a red saddle blanket with gold trim and jingle bells
+	box(
+		"Blanket",
+		Vector3.new(1.7, 0.25, 1.5),
+		at(0, 2.6, 0.1),
+		Color3.fromRGB(190, 30, 40),
+		Enum.Material.Fabric
+	)
+	for _, z in { -0.68, 0.88 } do
+		box(
+			"Trim",
+			Vector3.new(1.74, 0.29, 0.14),
+			at(0, 2.6, z),
+			Color3.fromRGB(255, 210, 60),
+			Enum.Material.Metal
+		)
+	end
+	for _, x in { -0.86, 0.86 } do
+		Build.ball(
+			model,
+			at(x, 2.45, 0.1),
+			0.26 * s,
+			Color3.fromRGB(255, 210, 60),
+			Enum.Material.Metal
+		)
+	end
+	-- The nose glows
+	local glow = Instance.new("PointLight")
+	glow.Color = def.nose
+	glow.Range = 6 * s
+	glow.Brightness = 0.8
+	glow.Shadows = false
+	glow.Parent = nose
 
 	if def.sparkle or golden then
 		local emitterPart = Build.deco({
@@ -169,6 +210,28 @@ function ReindeerModel.build(petId: string, golden: boolean, scale: number?): Mo
 	end
 
 	return model
+end
+
+-- Turns an anchored reindeer into a jointed one: every part is welded to the
+-- Root with an explicit C0, so ReindeerAnim can swing legs (and bob the whole
+-- deer through the weld that holds Root) while it rides along on something
+-- that moves under physics, like a delivery sleigh.
+function ReindeerModel.rig(model: Model)
+	local root = model.PrimaryPart
+	if not root then
+		return
+	end
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") and d ~= root then
+			local weld = Instance.new("Weld")
+			weld.Name = "Rig"
+			weld.Part0 = root
+			weld.Part1 = d
+			weld.C0 = root.CFrame:ToObjectSpace(d.CFrame)
+			weld.Parent = d
+		end
+	end
+	model:SetAttribute("Rigged", true)
 end
 
 return ReindeerModel

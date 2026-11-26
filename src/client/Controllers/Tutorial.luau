@@ -192,6 +192,10 @@ end
 
 function Tutorial.init()
 	local screen = UI.screen("Tutorial", 6)
+	-- The quest hint steps aside while the sleigh is in the air.
+	Bus.on("Flying", function(flying: boolean)
+		screen.Enabled = not flying
+	end)
 	banner = UI.make("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.fromScale(0.5, 0.2),

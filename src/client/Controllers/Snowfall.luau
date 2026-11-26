@@ -1,11 +1,7 @@
 --!strict
--- Gentle snowfall around the camera, plus optional background music.
+-- Gentle snowfall around the camera.
 
 local RunService = game:GetService("RunService")
-local SoundService = game:GetService("SoundService")
-
-local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
-local Config = require(Shared.Config)
 
 local Snowfall = {}
 
@@ -48,16 +44,6 @@ function Snowfall.start()
 			emitterPart.CFrame = CFrame.new(camera.CFrame.Position + Vector3.new(0, 45, 0))
 		end
 	end)
-
-	if Config.SOUNDS.Music ~= "" then
-		local music = Instance.new("Sound")
-		music.Name = "Music"
-		music.SoundId = Config.SOUNDS.Music
-		music.Looped = true
-		music.Volume = 0.25
-		music.Parent = SoundService
-		music:Play()
-	end
 end
 
 return Snowfall

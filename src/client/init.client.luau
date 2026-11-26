@@ -5,6 +5,7 @@
 local Controllers = script:WaitForChild("Controllers")
 
 local ORDER = {
+	"Audio",
 	"HUD",
 	"Menus",
 	"Popups",

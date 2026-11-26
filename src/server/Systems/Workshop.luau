@@ -222,7 +222,7 @@ local function machineModel(
 	local _, label = Build.billboard(
 		base,
 		"",
-		UDim2.fromOffset(220, 46),
+		UDim2.fromScale(13, 2.6),
 		Vector3.new(0, 11, 0),
 		Color3.new(1, 1, 1),
 		70
@@ -701,6 +701,7 @@ function Workshop.buyNextMachine(player: Player): (boolean, string?)
 		return false, `Need {Format.short(machine.cost)} Cheer`
 	end
 	profile.machines[machine.id] = 1
+	PlayerState.addXp(player, profile, Config.RANK.XP_BUILD * index)
 	local plotIndex = playerPlot[player]
 	if plotIndex then
 		renderMachines(plotIndex, profile)
@@ -732,6 +733,7 @@ function Workshop.upgradeMachine(player: Player, machineId: string): (boolean, s
 		return false, `Need {Format.short(cost)} Cheer`
 	end
 	profile.machines[machineId] = level + 1
+	PlayerState.addXp(player, profile, Config.RANK.XP_UPGRADE)
 	local plotIndex = playerPlot[player]
 	if plotIndex then
 		updateMachineLabel(plotIndex, machineId, level + 1)
@@ -780,6 +782,7 @@ function Workshop.hireElf(player: Player): (boolean, string?)
 		return false, `Need {Format.short(cost)} Cheer`
 	end
 	profile.elves += 1
+	PlayerState.addXp(player, profile, Config.RANK.XP_ELF)
 	local plotIndex = playerPlot[player]
 	if plotIndex then
 		renderElves(plotIndex, profile)
@@ -854,6 +857,7 @@ function Workshop.rebirth(player: Player): (boolean, string?)
 	renderAll(player, profile)
 	PlayerState.emit("pets", player) -- slot count may have grown
 	Net.push(player, "Effect", { kind = "Rebirth", rebirths = profile.rebirths })
+	PlayerState.addXp(player, profile, Config.RANK.XP_REBIRTH)
 	Net.toastAll(`⭐ {player.DisplayName} started New Season #{profile.rebirths}!`, "event")
 	return true,
 		`New Season! Permanent +{math.floor(profile.rebirths * Config.REBIRTH.BONUS_EACH * 100)}% Cheer`
@@ -874,6 +878,9 @@ function Workshop.loadSleigh(player: Player, auto: boolean): boolean
 	local amount = math.floor(profile.sack * mult)
 	profile.sack = 0
 	PlayerState.addCoins(player, profile, amount)
+	if not auto then
+		PlayerState.addXp(player, profile, Config.RANK.XP_LOAD)
+	end
 	local plotIndex = playerPlot[player]
 	if plotIndex then
 		renderSack(plotIndex, profile)

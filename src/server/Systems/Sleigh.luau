@@ -5,6 +5,7 @@
 -- decides every hit using the replicated position, a plausibility check on
 -- speed, a per-run "already delivered" set, and run time limits.
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
@@ -24,6 +25,9 @@ local Sleigh = {}
 
 type Run = {
 	id: number,
+	route: Config.RouteDef,
+	houses: { [number]: string }, -- chimney index -> "gift" | "gold" | "coal"
+	targets: number,
 	startedAt: number,
 	endsAt: number,
 	delivered: { [number]: boolean },
@@ -58,7 +62,7 @@ end
 
 local function attachSleigh(player: Player, root: BasePart, reindeer: number): Model
 	local character = player.Character :: Model
-	local sleigh = WorldBuilder.sleighModel(1.1)
+	local sleigh = WorldBuilder.sleighModel(1.1, true)
 	sleigh.Name = "DeliverySleigh"
 	-- Reindeer team, two abreast, in front of the sleigh.
 	for i = 1, reindeer do
@@ -66,6 +70,9 @@ local function attachSleigh(player: Player, root: BasePart, reindeer: number): M
 		local side = if i % 2 == 1 then -1 else 1
 		local deer = ReindeerModel.build(if i <= 2 then "Starlight" else "Cocoa", false, 1.0)
 		deer:PivotTo(CFrame.new(side * 2.2, 1.0, -8 - row * 5.5))
+		deer:SetAttribute("Row", row)
+		ReindeerModel.rig(deer)
+		CollectionService:AddTag(deer, "SleighDeer")
 		deer.Parent = sleigh
 		-- Glowing reins
 		Build.deco({
@@ -86,7 +93,19 @@ local function attachSleigh(player: Player, root: BasePart, reindeer: number): M
 			d.CanCollide = false
 			d.CanQuery = false
 			d.CanTouch = false
-			if d ~= primary then
+			local deer = d:FindFirstAncestorOfClass("Model")
+			if deer and deer ~= sleigh and deer:GetAttribute("Rigged") then
+				-- Rigged reindeer hang off their own Root; the Root rides on a
+				-- weld the client bobs up and down.
+				if d == deer.PrimaryPart then
+					local bob = Instance.new("Weld")
+					bob.Name = "Bob"
+					bob.Part0 = primary
+					bob.Part1 = d
+					bob.C0 = primary.CFrame:ToObjectSpace(d.CFrame)
+					bob.Parent = d
+				end
+			elseif d ~= primary then
 				local w = Instance.new("WeldConstraint")
 				w.Part0 = primary
 				w.Part1 = d
@@ -118,21 +137,66 @@ local function endRun(player: Player, reason: string)
 	if run.model then
 		run.model:Destroy()
 	end
+	local def = run.route
+	local stars = Economy.starsFor(def, run.count)
+	local perfect = run.count >= run.targets
+	local newStars = 0
+	local previousBest = 0
+	local unlocked: string? = nil
+	local xp = 0
 	local profile = PlayerData.get(player)
-	if profile and run.count >= #WorldBuilder.chimneys then
-		local got = PlayerState.addSnowflakes(player, profile, 15, true)
-		run.snowflakes += got
+	if profile then
+		local key = tostring(def.id)
+		local record = profile.routes[key]
+		if not record then
+			record = { stars = 0, best = 0 }
+			profile.routes[key] = record
+		end
+		previousBest = record.best
+		record.best = math.max(record.best, run.count)
+		if stars > record.stars then
+			newStars = stars - record.stars
+			local firstClear = record.stars == 0
+			record.stars = stars
+			profile.stars = Economy.totalStars(profile)
+			run.snowflakes += PlayerState.addSnowflakes(
+				player,
+				profile,
+				newStars * Config.ROUTE.STAR_SNOWFLAKES * def.id,
+				true
+			)
+			xp += newStars * Config.ROUTE.XP_PER_STAR * def.id
+			local nextDef = Config.ROUTES[def.id + 1]
+			if firstClear and nextDef then
+				unlocked = nextDef.name
+			end
+			if stars == 3 then
+				Net.toastAll(`⭐⭐⭐ {player.DisplayName} got 3 stars on {def.name}!`, "event")
+			end
+		end
+		xp += run.count * Config.ROUTE.XP_PER_PRESENT * def.id
+		PlayerState.addXp(player, profile, xp)
+		if newStars > 0 then
+			PlayerState.emit("rank", player)
+		end
 	end
 	cooldownUntil[player] = os.clock() + Config.SLEIGH.COOLDOWN
 	PlayerState.setExtra(player, "flying", false)
 	PlayerState.setExtra(player, "sleighCooldownUntil", os.time() + Config.SLEIGH.COOLDOWN)
 	Net.push(player, "SleighEnd", {
 		reason = reason,
+		route = def.id,
 		count = run.count,
+		targets = run.targets,
 		coins = run.coins,
 		snowflakes = run.snowflakes,
 		bestCombo = run.bestCombo,
-		perfect = run.count >= #WorldBuilder.chimneys,
+		perfect = perfect,
+		stars = stars,
+		newStars = newStars,
+		previousBest = previousBest,
+		unlocked = unlocked,
+		xp = xp,
 	})
 	if player.Parent == Players and reason ~= "died" then
 		task.delay(0.1, function()
@@ -145,13 +209,20 @@ local function endRun(player: Player, reason: string)
 	end
 end
 
-function Sleigh.beginRun(player: Player): (boolean, any)
+function Sleigh.beginRun(player: Player, routeId: unknown): (boolean, any)
 	local profile = PlayerData.get(player)
 	if not profile then
 		return false, "Loading..."
 	end
 	if runs[player] then
 		return false, "Already flying!"
+	end
+	local def = if typeof(routeId) == "number" then Config.ROUTES[routeId] else nil
+	if not def then
+		return false, "Pick a route"
+	end
+	if not Economy.routeUnlocked(profile, def.id) then
+		return false, "Earn a star on the route before it first"
 	end
 	local now = os.clock()
 	local cd = cooldownUntil[player]
@@ -166,6 +237,18 @@ function Sleigh.beginRun(player: Player): (boolean, any)
 	end
 
 	local stats = Economy.sleighStats(profile)
+	local duration = def.time + (stats.duration - Config.SLEIGH.BASE_TIME)
+	local radius = stats.radius * def.radius
+	local houses = Economy.routeHouses(def, #WorldBuilder.chimneys)
+	local targets = 0
+	local houseKeys: { [string]: string } = {}
+	for index, kind in houses do
+		houseKeys[tostring(index)] = kind
+		if kind ~= "coal" then
+			targets += 1
+		end
+	end
+
 	runCounter += 1
 	local startCF = WorldBuilder.townStart()
 	character:PivotTo(startCF)
@@ -175,8 +258,11 @@ function Sleigh.beginRun(player: Player): (boolean, any)
 	local nowTime = os.clock()
 	local run: Run = {
 		id = runCounter,
+		route = def,
+		houses = houses,
+		targets = targets,
 		startedAt = nowTime,
-		endsAt = nowTime + stats.duration,
+		endsAt = nowTime + duration,
 		delivered = {},
 		count = 0,
 		coins = 0,
@@ -186,8 +272,8 @@ function Sleigh.beginRun(player: Player): (boolean, any)
 		lastDropAt = 0,
 		lastPos = startCF.Position,
 		lastPosAt = nowTime,
-		speed = stats.speed,
-		radius = stats.radius,
+		speed = stats.speed + def.wind,
+		radius = radius,
 		suspendedUntil = nowTime + 0.5,
 		sampleAt = nowTime,
 		model = model,
@@ -206,21 +292,18 @@ function Sleigh.beginRun(player: Player): (boolean, any)
 			endRun(player, "died")
 		end)
 	)
-	task.delay(stats.duration + 0.5, function()
-		if runs[player] == run then
-			endRun(player, "time")
-		end
-	end)
 
 	PlayerState.setExtra(player, "flying", true)
 	return true,
 		{
-			duration = stats.duration,
+			route = def.id,
+			duration = duration,
 			speed = stats.speed,
-			radius = stats.radius,
+			radius = radius,
 			altitude = Config.SLEIGH.ALTITUDE,
 			townOrigin = WorldBuilder.TOWN_ORIGIN.Position,
-			chimneys = #WorldBuilder.chimneys,
+			houses = houseKeys,
+			targets = targets,
 		}
 end
 
@@ -250,10 +333,13 @@ function Sleigh.drop(player: Player): (boolean, any)
 		return false, "miss"
 	end
 
+	-- Nearest house on this route that hasn't been used yet. Naughty houses
+	-- count, so a careless drop near one lands on it.
 	local best: number? = nil
 	local bestDist = run.radius + Config.SLEIGH.LATENCY_SLACK
-	for index, chimney in WorldBuilder.chimneys do
-		if not run.delivered[index] then
+	for index, _ in run.houses do
+		local chimney = WorldBuilder.chimneys[index]
+		if chimney and not run.delivered[index] then
 			local flat = Vector3.new(pos.X - chimney.X, 0, pos.Z - chimney.Z).Magnitude
 			local height = pos.Y - chimney.Y
 			if flat <= bestDist and height > -5 and height < 120 then
@@ -268,28 +354,49 @@ function Sleigh.drop(player: Player): (boolean, any)
 	end
 
 	run.delivered[best] = true
+	local kind = run.houses[best]
+	if kind == "coal" then
+		run.combo = 0
+		run.endsAt -= Config.ROUTE.COAL_TIME_PENALTY
+		return true, { index = best, coal = true, remaining = math.max(0, run.endsAt - now) }
+	end
+
 	run.count += 1
 	run.combo = if now - run.lastDropAt <= Config.SLEIGH.COMBO_WINDOW then run.combo + 1 else 1
 	run.bestCombo = math.max(run.bestCombo, run.combo)
 	run.lastDropAt = now
 
-	local reward = Economy.presentReward(profile, PlayerState.ctx(player), run.combo)
+	local golden = kind == "gold"
+	local reward = Economy.presentReward(
+		profile,
+		PlayerState.ctx(player),
+		run.combo,
+		run.route.reward * (if golden then Config.ROUTE.GOLDEN_MULTIPLIER else 1)
+	)
 	PlayerState.addCoins(player, profile, reward)
 	run.coins += reward
 	profile.delivered += 1
 	local snow = 0
-	if run.count % Config.SLEIGH.SNOWFLAKE_EVERY == 0 then
+	if golden or run.count % Config.SLEIGH.SNOWFLAKE_EVERY == 0 then
 		snow = PlayerState.addSnowflakes(player, profile, 1, true)
 		run.snowflakes += snow
 	end
 	Events.addCommunityPresents(1)
 	PlayerState.dirty(player)
 
-	if run.count >= #WorldBuilder.chimneys then
+	if run.count >= run.targets then
 		task.defer(endRun, player, "perfect")
 	end
 	return true,
-		{ index = best, reward = reward, combo = run.combo, count = run.count, snowflakes = snow }
+		{
+			index = best,
+			reward = reward,
+			combo = run.combo,
+			count = run.count,
+			snowflakes = snow,
+			golden = golden,
+			stars = Economy.starsFor(run.route, run.count),
+		}
 end
 
 -- Server-side movement sampling: a client that teleports between chimneys
@@ -297,7 +404,9 @@ end
 local function sampleRuns()
 	local now = os.clock()
 	for player, run in runs do
-		if now - run.sampleAt >= 0.2 then
+		if now > run.endsAt then
+			task.defer(endRun, player, "time")
+		elseif now - run.sampleAt >= 0.2 then
 			local root = rootOf(player)
 			if root then
 				local pos = root.Position
@@ -316,8 +425,8 @@ end
 
 function Sleigh.start()
 	game:GetService("RunService").Heartbeat:Connect(sampleRuns)
-	Net.handle("StartDelivery", 0.5, 2, function(player)
-		return Sleigh.beginRun(player)
+	Net.handle("StartDelivery", 0.5, 2, function(player, routeId: unknown)
+		return Sleigh.beginRun(player, routeId)
 	end)
 	Net.handle("DropPresent", 5, 6, function(player)
 		return Sleigh.drop(player)

@@ -8,6 +8,8 @@ export type PetEntry = {
 	golden: boolean,
 }
 
+export type RouteRecord = { stars: number, best: number }
+
 export type Profile = {
 	version: number,
 	coins: number,
@@ -39,6 +41,10 @@ export type Profile = {
 	receipts: { string },
 	tutorialStep: number,
 	createdAt: number,
+	xp: number, -- progress toward the next Helper Rank
+	rank: number,
+	routes: { [string]: RouteRecord }, -- route id (as a string) -> best result
+	stars: number, -- total route stars, kept for the leaderboard
 }
 
 -- Things the server knows that the profile does not hold.
@@ -53,6 +59,7 @@ export type Breakdown = {
 	elves: number,
 	pets: number,
 	rebirth: number,
+	rank: number,
 	pass: number,
 	boost: number,
 	total: number,

@@ -3,8 +3,12 @@
 -- owners. Pet models are anchored server instances; moving them here is a
 -- local-only change, which costs no network traffic.
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local ReindeerAnim = require(Shared.Models.ReindeerAnim)
 
 local PetFollow = {}
 
@@ -53,6 +57,22 @@ function PetFollow.start()
 			end
 			current[model] = nextCF
 			model:PivotTo(nextCF)
+			-- Legs: gallop in the air, trot when the owner moves, stand when idle.
+			local stride = math.clamp(speed / 16, 0, 1)
+			ReindeerAnim.step(
+				model,
+				t + slot * 0.37,
+				if flying then 2.6 else 2.2 + stride,
+				if flying then 0.75 else stride * 0.6,
+				flying
+			)
+		end
+		-- Sleigh teams (every player's, so everyone sees them run).
+		for _, deer in CollectionService:GetTagged("SleighDeer") do
+			if deer:IsA("Model") and deer:IsDescendantOf(workspace) then
+				local row = tonumber(deer:GetAttribute("Row")) or 1
+				ReindeerAnim.step(deer, t + row * 0.13, 2.8, 0.8, true)
+			end
 		end
 	end)
 end

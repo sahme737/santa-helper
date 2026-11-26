@@ -103,6 +103,7 @@ function Pets.hatch(player: Player, eggId: string, useToken: boolean): (boolean,
 	if not entry then
 		return false, "Could not add reindeer"
 	end
+	PlayerState.addXp(player, profile, Config.RANK.XP_HATCH)
 	local def = Config.PETS[petId]
 	if def.rarity == "Legendary" or def.rarity == "Mythic" then
 		Net.toastAll(`🦌 {player.DisplayName} hatched a {def.rarity} {def.name}!`, "event")

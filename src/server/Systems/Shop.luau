@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Economy = require(Shared.Economy)
 local Build = require(Shared.Util.Build)
 local Format = require(Shared.Util.Format)
 local CosmeticModels = require(Shared.Models.CosmeticModels)
@@ -74,11 +75,32 @@ local function applyCosmetics(player: Player, profile: Profile)
 			head,
 			"⭐ VIP",
 			UDim2.fromOffset(90, 28),
-			Vector3.new(0, 3.2, 0),
+			Vector3.new(0, 4.1, 0),
 			Color3.fromRGB(255, 210, 60),
 			80
 		)
 		gui.Name = "VipTag"
+	end
+
+	-- Helper Rank tag: everyone can see how far you've come.
+	local oldRank = head and head:FindFirstChild("RankTag")
+	if oldRank then
+		oldRank:Destroy()
+	end
+	if head and head:IsA("BasePart") then
+		local stars = if profile.stars > 0 then `  ⭐{profile.stars}` else ""
+		local gui = Build.billboard(
+			head,
+			`Lv.{profile.rank} {Economy.rankTitle(profile.rank)}{stars}`,
+			UDim2.fromScale(9, 0.9),
+			Vector3.new(0, 3.1, 0),
+			if profile.rank >= 30
+				then Color3.fromRGB(255, 215, 90)
+				elseif profile.rank >= 10 then Color3.fromRGB(150, 220, 255)
+				else Color3.fromRGB(235, 235, 235),
+			70
+		)
+		gui.Name = "RankTag"
 	end
 end
 
@@ -196,6 +218,7 @@ function Shop.start()
 	end)
 	PlayerState.onChanged("cosmetics", applyCosmetics)
 	PlayerState.onChanged("passes", applyCosmetics)
+	PlayerState.onChanged("rank", applyCosmetics)
 
 	Net.handle("BuyCosmetic", 3, 5, function(player, id: unknown)
 		local cid = Guard.oneOf(id, CosmeticModels.BY_ID)
@@ -232,6 +255,17 @@ function Shop.start()
 			PlayerState.addCoins(player, profile, math.max(1e5, profile.coins * 10))
 		elseif command == "snowflakes" then
 			PlayerState.addSnowflakes(player, profile, 500, false)
+		elseif command == "xp" then
+			PlayerState.addXp(player, profile, 500)
+		elseif command == "routes" then
+			for _, def in Config.ROUTES do
+				local key = tostring(def.id)
+				if not profile.routes[key] then
+					profile.routes[key] = { stars = 1, best = def.stars[1] }
+				end
+			end
+			profile.stars = Economy.totalStars(profile)
+			PlayerState.emit("rank", player)
 		elseif command == "boost" then
 			profile.boostUntil = os.time() + 600
 		elseif string.sub(command, 1, 5) == "pass:" then
