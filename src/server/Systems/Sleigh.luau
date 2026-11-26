@@ -58,7 +58,7 @@ end
 
 local function attachSleigh(player: Player, root: BasePart, reindeer: number): Model
 	local character = player.Character :: Model
-	local sleigh = WorldBuilder.sleighModel(1.1)
+	local sleigh = WorldBuilder.sleighModel(1.1, true)
 	sleigh.Name = "DeliverySleigh"
 	-- Reindeer team, two abreast, in front of the sleigh.
 	for i = 1, reindeer do

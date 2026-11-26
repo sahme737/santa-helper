@@ -139,11 +139,24 @@ function HUD.announce(text: string, color: Color3?)
 	announceLabel.TextColor3 = color or T.Gold
 	announceLabel.Visible = true
 	announceLabel.TextTransparency = 0
+	local stroke = announceLabel:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Transparency = 0
+	end
 	UI.pop(announceLabel, 0.5)
 	task.delay(2.6, function()
-		if announceLabel.Text == text then
-			UI.tween(announceLabel, UI.SMOOTH, { TextTransparency = 1 })
+		if announceLabel.Text ~= text then
+			return
 		end
+		UI.tween(announceLabel, UI.SMOOTH, { TextTransparency = 1 })
+		if stroke then
+			UI.tween(stroke, UI.SMOOTH, { Transparency = 1 })
+		end
+		task.delay(0.6, function()
+			if announceLabel.Text == text then
+				announceLabel.Visible = false
+			end
+		end)
 	end)
 end
 
@@ -152,9 +165,10 @@ function HUD.floatGain(text: string, color: Color3?)
 	local label = UI.text({
 		Text = text,
 		Size = UDim2.fromScale(0.25, 0.06),
-		Position = UDim2.fromScale(0.02, 0.2),
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.fromScale(0.98, 0.2),
 		TextColor3 = color or T.Gold,
-		TextXAlignment = Enum.TextXAlignment.Left,
+		TextXAlignment = Enum.TextXAlignment.Right,
 		MaxTextSize = 40,
 		Parent = screen,
 	})
@@ -163,7 +177,7 @@ function HUD.floatGain(text: string, color: Color3?)
 	UI.tween(
 		label,
 		TweenInfo.new(1.4, Enum.EasingStyle.Quad),
-		{ Position = UDim2.fromScale(0.02, 0.12), TextTransparency = 1 }
+		{ Position = UDim2.fromScale(0.98, 0.12), TextTransparency = 1 }
 	)
 	task.delay(1.5, function()
 		label:Destroy()
@@ -205,10 +219,18 @@ end
 local function build()
 	screen = UI.screen("HUD", 5)
 
-	-- Currencies (top-left)
+	-- Roblox chat sits top-left and the default player list top-right, so the
+	-- currencies take the top-right corner and the player list is hidden (the
+	-- world leaderboards replace it).
+	pcall(function()
+		game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
+	end)
+
+	-- Currencies (top-right)
 	local left: Frame = UI.make("Frame", {
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(12, 8),
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -12, 0, 8),
 		Size = UDim2.fromScale(0.24, 0.26),
 		Parent = screen,
 	})
@@ -272,7 +294,7 @@ local function build()
 	local menu: Frame = UI.make("Frame", {
 		BackgroundTransparency = 1,
 		AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0, 12, 0.6, 0),
+		Position = UDim2.new(0, 12, 0.64, 0),
 		Size = UDim2.fromScale(0.075, 0.6),
 		Parent = screen,
 	})
@@ -351,16 +373,19 @@ local function build()
 	})
 	UI.textStroke(rushLabel, T.Ink, 1.5)
 
-	-- Server goal (top right)
+	-- Server goal (top right, under the currencies)
 	local goal: Frame = UI.make("Frame", {
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -12, 0, 8),
+		Position = UDim2.new(1, -12, 0, 8 + left.AbsoluteSize.Y + 8),
 		Size = UDim2.fromScale(0.2, 0.07),
 		BackgroundColor3 = Color3.fromRGB(40, 25, 30),
 		BackgroundTransparency = 0.25,
 		Parent = screen,
 	})
 	UI.make("UISizeConstraint", { MaxSize = Vector2.new(280, 70), Parent = goal })
+	left:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+		goal.Position = UDim2.new(1, -12, 0, 8 + left.AbsoluteSize.Y + 8)
+	end)
 	UI.corner(goal, 12)
 	UI.stroke(goal, T.Purple, 2)
 	goalLabel = UI.text({

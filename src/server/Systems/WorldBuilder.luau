@@ -899,7 +899,7 @@ end
 --------------------------------------------------------------------------------
 -- Sleigh model (shared by runway, plots and delivery runs)
 --------------------------------------------------------------------------------
-function WorldBuilder.sleighModel(scale: number): Model
+function WorldBuilder.sleighModel(scale: number, compact: boolean?): Model
 	local s = scale
 	local model = Instance.new("Model")
 	model.Name = "Sleigh"
@@ -937,16 +937,18 @@ function WorldBuilder.sleighModel(scale: number): Model
 		)
 	end
 	-- Sack of presents in the back
+	local sackSize = if compact then 2 else 3.6
+	local sackY = if compact then 4.4 else 5.5
 	local sack = Build.ball(
 		model,
-		CFrame.new(0, 5.5 * s, 3 * s),
-		3.6 * s,
+		CFrame.new(0, sackY * s, 3 * s),
+		sackSize * s,
 		Color3.fromRGB(150, 100, 60),
 		Enum.Material.Fabric
 	)
 	sack.Name = "Sack"
-	local p = ToyModels.present(1.4 * s, 1)
-	p:PivotTo(CFrame.new(1.2 * s, 6.6 * s, 2.6 * s))
+	local p = ToyModels.present((if compact then 1 else 1.4) * s, 1)
+	p:PivotTo(CFrame.new(1.2 * s, (sackY + sackSize * 0.3) * s, 2.6 * s))
 	p.Parent = model
 	return model
 end
@@ -1056,7 +1058,7 @@ local function buildPlot(plots: Instance, index: number): Model
 	Build.billboard(
 		wrapGlow,
 		"🎀 Wrapping Station",
-		UDim2.fromOffset(170, 34),
+		UDim2.fromScale(10, 2),
 		Vector3.new(0, 5, 0),
 		Color3.new(1, 1, 1),
 		70
@@ -1086,7 +1088,7 @@ local function buildPlot(plots: Instance, index: number): Model
 	Build.billboard(
 		sack,
 		"Sack 0%",
-		UDim2.fromOffset(200, 50),
+		UDim2.fromScale(11, 2.8),
 		Vector3.new(0, 9, 0),
 		Color3.new(1, 1, 1),
 		90
@@ -1117,7 +1119,7 @@ local function buildPlot(plots: Instance, index: number): Model
 	Build.billboard(
 		loadPad,
 		"🛷 LOAD SLEIGH",
-		UDim2.fromOffset(220, 50),
+		UDim2.fromScale(13, 3),
 		Vector3.new(0, 5, 0),
 		Color3.new(1, 1, 1),
 		100
@@ -1144,7 +1146,7 @@ local function buildPlot(plots: Instance, index: number): Model
 		Build.billboard(
 			pad,
 			"",
-			UDim2.fromOffset(220, 70),
+			UDim2.fromScale(13, 4.2),
 			Vector3.new(0, 5.5, 0),
 			Color3.new(1, 1, 1),
 			90

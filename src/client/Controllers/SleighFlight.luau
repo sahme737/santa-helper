@@ -441,9 +441,9 @@ function SleighFlight.init()
 	UI.button({
 		Text = "Land",
 		Color = T.Muted,
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -12, 0.13, 0),
-		Size = UDim2.fromScale(0.08, 0.05),
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -24, 1, -290),
+		Size = UDim2.fromOffset(130, 48),
 		Parent = hud,
 		MaxTextSize = 20,
 		OnClick = function()

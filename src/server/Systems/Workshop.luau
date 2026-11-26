@@ -222,7 +222,7 @@ local function machineModel(
 	local _, label = Build.billboard(
 		base,
 		"",
-		UDim2.fromOffset(220, 46),
+		UDim2.fromScale(13, 2.6),
 		Vector3.new(0, 11, 0),
 		Color3.new(1, 1, 1),
 		70
