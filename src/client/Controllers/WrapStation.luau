@@ -49,7 +49,7 @@ local function floatText(text: string)
 	local label = UI.text({
 		Text = text,
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5 + (math.random() - 0.5) * 0.12, 0, 0.7, 0),
+		Position = UDim2.fromScale(0.5 + (math.random() - 0.5) * 0.12, 0.7),
 		Size = UDim2.fromScale(0.3, 0.06),
 		TextColor3 = T.Gold,
 		MaxTextSize = 38,
