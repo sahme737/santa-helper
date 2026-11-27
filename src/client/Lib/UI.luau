@@ -422,6 +422,10 @@ function UI.panel(screen: ScreenGui, title: string, color: Color3?): Panel
 	return panel
 end
 
+function UI.anyPanelOpen(): boolean
+	return openPanel ~= nil
+end
+
 function UI.closeAll()
 	if openPanel then
 		openPanel.close()

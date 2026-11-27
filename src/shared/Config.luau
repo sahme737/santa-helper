@@ -143,6 +143,14 @@ Config.ELVES = {
 	BONUS_EACH = 0.1, -- +10% production per elf
 }
 
+-- Wrapping presents by hand at the wrapping table. Elves do it for you.
+Config.WRAP = {
+	COOLDOWN = 0.25, -- seconds between wraps the server accepts
+	INCOME_SECONDS = 0.6, -- one wrap is worth this many seconds of production
+	MIN_VALUE = 6,
+	REACH = 20, -- studs from the table
+}
+
 Config.SACK = {
 	MAX_LEVEL = 20,
 	BASE_CAPACITY = 1000,

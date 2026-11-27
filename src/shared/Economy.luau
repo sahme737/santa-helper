@@ -161,6 +161,21 @@ function Economy.incomePerSecond(profile: Profile, ctx: Context): number
 	return Economy.breakdown(profile, ctx).total
 end
 
+-- What the workshop earns on its own. Toys only get wrapped without the
+-- player once an elf has been hired.
+function Economy.autoIncome(profile: Profile, ctx: Context): number
+	if profile.elves < 1 then
+		return 0
+	end
+	return Economy.incomePerSecond(profile, ctx)
+end
+
+-- Value of one present the player wraps by hand.
+function Economy.wrapValue(profile: Profile, ctx: Context): number
+	local income = Economy.incomePerSecond(profile, ctx)
+	return math.max(Config.WRAP.MIN_VALUE, round(income * Config.WRAP.INCOME_SECONDS))
+end
+
 -- Coins reward measured in "minutes of income", never below a floor.
 function Economy.scaledCoins(
 	profile: Profile,

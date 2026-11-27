@@ -10,6 +10,7 @@ local ORDER = {
 	"Menus",
 	"Popups",
 	"Tutorial",
+	"WrapStation",
 	"SleighFlight",
 	"WorkshopFX",
 	"PetFollow",

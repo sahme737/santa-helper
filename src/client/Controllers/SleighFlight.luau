@@ -29,6 +29,7 @@ local SleighFlight = {}
 local T = UI.Theme
 local player = Players.LocalPlayer
 
+local TURN_RATE = 1.15 -- radians per second at full steer
 local COAL_COLOR = Color3.fromRGB(150, 40, 40)
 local GOLD_COLOR = Color3.fromRGB(255, 225, 90)
 
@@ -42,6 +43,7 @@ type Flight = {
 	velocity: LinearVelocity,
 	align: AlignOrientation,
 	yaw: number,
+	turn: number, -- smoothed steering, -1..1
 	bank: number,
 	speed: number,
 	radius: number,
@@ -370,7 +372,12 @@ local function step(dt: number)
 	end
 	local now = os.clock()
 	local move = moveVector()
-	local turn = math.clamp(move.X, -1, 1)
+	-- Small stick wobbles are ignored, and the turn eases in and out instead
+	-- of snapping, so the sleigh never whips round.
+	local wanted = math.clamp(move.X, -1, 1)
+	if math.abs(wanted) < 0.2 then
+		wanted = 0
+	end
 	-- Keep the sleigh inside the town.
 	local flat =
 		Vector3.new(f.root.Position.X - f.townOrigin.X, 0, f.root.Position.Z - f.townOrigin.Z)
@@ -378,9 +385,11 @@ local function step(dt: number)
 		local toCenter = -flat.Unit
 		local desiredYaw = math.atan2(-toCenter.X, -toCenter.Z)
 		local diff = (desiredYaw - f.yaw + math.pi) % (math.pi * 2) - math.pi
-		turn = math.clamp(-diff * 2, -1, 1)
+		wanted = math.clamp(-diff * 2, -1, 1)
 	end
-	f.yaw -= turn * 1.6 * dt
+	f.turn += (wanted - f.turn) * math.min(1, dt * 4)
+	local turn = f.turn
+	f.yaw -= turn * TURN_RATE * dt
 	f.bank += ((turn * 0.45) - f.bank) * math.min(1, dt * 5)
 	local throttle = 1 - math.clamp(move.Z, -1, 1) * 0.35 -- W speeds up, S slows down
 	local speed = f.speed * throttle
@@ -399,7 +408,7 @@ local function step(dt: number)
 			cam.CameraType = Enum.CameraType.Scriptable
 			cam.CFrame = goal
 		else
-			cam.CFrame = cam.CFrame:Lerp(goal, math.min(1, dt * 6))
+			cam.CFrame = cam.CFrame:Lerp(goal, math.min(1, dt * 5))
 		end
 	end
 	local targetY = f.townOrigin.Y + f.altitude
@@ -421,6 +430,7 @@ local function step(dt: number)
 		windLabel.TextTransparency = 1 - math.clamp(math.abs(gust) * 1.4, 0.35, 1)
 	end
 	f.velocity.VectorVelocity = look * speed + windVector + Vector3.new(0, climb, 0)
+	f.root.AssemblyAngularVelocity = Vector3.zero
 	f.align.CFrame = CFrame.Angles(0, f.yaw, 0)
 		* CFrame.Angles(math.sin(now * 2.8) * 0.03, 0, f.bank + gust * 0.12)
 
@@ -491,7 +501,9 @@ function SleighFlight.begin(routeId: number)
 	align.Attachment0 = attachment
 	align.Mode = Enum.OrientationAlignmentMode.OneAttachment
 	align.MaxTorque = math.huge
-	align.Responsiveness = 40
+	-- Rigid: the sleigh takes exactly the heading we give it, so nothing it
+	-- bumps into (and no physics wobble) can set it spinning.
+	align.RigidityEnabled = true
 	align.CFrame = CFrame.new()
 	align.Parent = root
 
@@ -504,7 +516,8 @@ function SleighFlight.begin(routeId: number)
 		attachment = attachment,
 		velocity = velocity,
 		align = align,
-		yaw = 0,
+		yaw = math.atan2(-root.CFrame.LookVector.X, -root.CFrame.LookVector.Z),
+		turn = 0,
 		bank = 0,
 		speed = data.speed,
 		radius = data.radius,

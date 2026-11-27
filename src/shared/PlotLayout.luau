@@ -29,14 +29,22 @@ for i = 1, 8 do
 		Vector3.new(SLOT_X[i], PlotLayout.BELT_Y, PlotLayout.BELT_Z + (if behind then 2 else -2))
 end
 
+-- The wrapping table stands in front of the wrapping station, facing the entrance.
+PlotLayout.WRAP_TABLE = CFrame.new(PlotLayout.WRAP_X, 0, PlotLayout.BELT_Z - 10)
+
+-- The first two elves wrap at the table; the rest help at the machines.
 PlotLayout.ELF_SLOTS = {} :: { CFrame }
+PlotLayout.WRAP_ELVES = 2
+PlotLayout.ELF_SLOTS[1] = PlotLayout.WRAP_TABLE
+	* CFrame.new(-6.5, 0, 0)
+	* CFrame.Angles(0, math.rad(-90), 0)
+PlotLayout.ELF_SLOTS[2] = PlotLayout.WRAP_TABLE
+	* CFrame.new(6.5, 0, 0)
+	* CFrame.Angles(0, math.rad(90), 0)
 for i = 1, 8 do
 	local slot = PlotLayout.MACHINE_SLOTS[i]
-	PlotLayout.ELF_SLOTS[i] = slot * CFrame.new(7.5, 0, 0) * CFrame.Angles(0, math.rad(-90), 0)
+	PlotLayout.ELF_SLOTS[i + 2] = slot * CFrame.new(7.5, 0, 0) * CFrame.Angles(0, math.rad(-90), 0)
 end
-PlotLayout.ELF_SLOTS[9] = CFrame.new(PlotLayout.WRAP_X, 0, PlotLayout.BELT_Z - 9)
-	* CFrame.Angles(0, math.pi, 0)
-PlotLayout.ELF_SLOTS[10] = CFrame.new(PlotLayout.WRAP_X, 0, PlotLayout.BELT_Z + 9)
 
 PlotLayout.SPAWN = CFrame.new(0, 3, -60) * CFrame.Angles(0, math.pi, 0)
 PlotLayout.LOAD_PAD = CFrame.new(38, 0, -24)
