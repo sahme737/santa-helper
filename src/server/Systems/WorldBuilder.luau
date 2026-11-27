@@ -1449,7 +1449,7 @@ local function buildPlot(plots: Instance, index: number): Model
 		Build.light(lamp, WARM_LIGHT, 22, 1.2)
 	end
 	-- A friendly snowman and a decorated tree welcome visitors at the entrance.
-	local snowmanCF = at(CFrame.new(-17, 0.1, -56) * CFrame.Angles(0, math.rad(200), 0))
+	local snowmanCF = at(CFrame.new(-34, 0.1, -52) * CFrame.Angles(0, math.rad(215), 0))
 	Build.ball(model, snowmanCF * CFrame.new(0, 2, 0), 4.4, SNOW, Enum.Material.Snow)
 	Build.ball(model, snowmanCF * CFrame.new(0, 5.1, 0), 3.3, SNOW, Enum.Material.Snow)
 	Build.ball(model, snowmanCF * CFrame.new(0, 7.5, 0), 2.4, SNOW, Enum.Material.Snow)
@@ -1495,7 +1495,7 @@ local function buildPlot(plots: Instance, index: number): Model
 			Parent = model,
 		})
 	end
-	WorldBuilder.pineTree(model, at(CFrame.new(17, 0.1, -56)), 16, true)
+	WorldBuilder.pineTree(model, at(CFrame.new(34, 0.1, -56)), 16, true)
 
 	-- Present sack (Workshop scales it with fill)
 	local sx = PlotLayout.SACK_X

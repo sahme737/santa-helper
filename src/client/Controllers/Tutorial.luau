@@ -329,6 +329,8 @@ end
 
 -- Bounce the arrow and aim the screen-edge pointer every frame.
 local function animate()
+	-- The guide steps aside for menus and while the sleigh is in the air.
+	screen.Enabled = not flying and not UI.anyPanelOpen()
 	local target = currentTarget
 	local gui = arrow
 	if not target or not gui or not target:IsA("BasePart") or not target.Parent then
@@ -379,7 +381,6 @@ function Tutorial.init()
 	-- The guide steps aside while the sleigh is in the air.
 	Bus.on("Flying", function(value: boolean)
 		flying = value
-		screen.Enabled = not value
 	end)
 	banner = UI.make("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0),
