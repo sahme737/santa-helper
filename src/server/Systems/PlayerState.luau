@@ -399,7 +399,7 @@ function PlayerState.start()
 	end)
 
 	PlayerData.onBeforeSave(function(player, profile)
-		profile.incomeRate = Economy.incomePerSecond(profile, PlayerState.ctx(player))
+		profile.incomeRate = Economy.autoIncome(profile, PlayerState.ctx(player))
 	end)
 
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)

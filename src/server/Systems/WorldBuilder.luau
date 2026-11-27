@@ -176,9 +176,9 @@ local function buildLighting()
 	-- A deep-blue winter dusk: bright enough to play in, dark enough that
 	-- every fairy light, lantern and window glows.
 	Lighting.ClockTime = 17.55
-	Lighting.Brightness = 2.4
-	Lighting.Ambient = Color3.fromRGB(88, 92, 132)
-	Lighting.OutdoorAmbient = Color3.fromRGB(138, 146, 196)
+	Lighting.Brightness = 2.8
+	Lighting.Ambient = Color3.fromRGB(122, 118, 150)
+	Lighting.OutdoorAmbient = Color3.fromRGB(172, 172, 214)
 	Lighting.ColorShift_Top = Color3.fromRGB(255, 196, 150)
 	Lighting.EnvironmentDiffuseScale = 0.75
 	Lighting.EnvironmentSpecularScale = 0.9
@@ -204,15 +204,15 @@ local function buildLighting()
 	atmosphere.Parent = Lighting
 
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.6
+	bloom.Intensity = 0.8
 	bloom.Size = 30
 	bloom.Threshold = 1.7
 	bloom.Parent = Lighting
 
 	local color = Instance.new("ColorCorrectionEffect")
-	color.Saturation = 0.22
+	color.Saturation = 0.32
 	color.Contrast = 0.1
-	color.Brightness = 0.02
+	color.Brightness = 0.04
 	color.TintColor = Color3.fromRGB(255, 244, 236)
 	color.Parent = Lighting
 
@@ -1339,6 +1339,163 @@ local function buildPlot(plots: Instance, index: number): Model
 		Color3.new(1, 1, 1),
 		70
 	)
+
+	-- Wrapping table: where the player (and the first elves) wrap presents.
+	local tableCF = PlotLayout.WRAP_TABLE
+	local wrapTable = Build.part({
+		Name = "WrapTable",
+		Size = Vector3.new(9, 0.6, 4.5),
+		CFrame = at(tableCF * CFrame.new(0, 3, 0)),
+		Color = Color3.fromRGB(176, 122, 78),
+		Material = Enum.Material.WoodPlanks,
+		Parent = model,
+	})
+	for _, lx in { -3.8, 3.8 } do
+		for _, lz in { -1.6, 1.6 } do
+			Build.part({
+				Size = Vector3.new(0.6, 2.7, 0.6),
+				CFrame = at(tableCF * CFrame.new(lx, 1.35, lz)),
+				Color = WOOD,
+				Parent = model,
+			})
+		end
+	end
+	-- Festive runner, rolls of wrapping paper, ribbon and a finished present.
+	Build.deco({
+		Size = Vector3.new(9.2, 0.1, 2),
+		CFrame = at(tableCF * CFrame.new(0, 3.35, 0)),
+		Color = RED,
+		Material = Enum.Material.Fabric,
+		Parent = model,
+	})
+	for k, color in { RED, GREEN, GOLD } do
+		Build.cylinder(
+			model,
+			at(tableCF * CFrame.new(-3.4 + k * 0.75, 3.75, 1.3) * CFrame.Angles(0, math.rad(90), 0)),
+			2.2,
+			0.7,
+			color
+		)
+	end
+	local sample = ToyModels.present(1.5, 2)
+	sample:PivotTo(at(tableCF * CFrame.new(3, 4.1, 0.6) * CFrame.Angles(0, 0.5, 0)))
+	sample.Parent = model
+	local wrapSpot = Build.deco({
+		Name = "WrapSpot",
+		Size = Vector3.new(1, 1, 1),
+		CFrame = at(tableCF * CFrame.new(0, 4.2, 0)),
+		Transparency = 1,
+		Parent = model,
+	})
+	Build.light(wrapSpot, WARM_LIGHT, 12, 1.2)
+	Build.billboard(
+		wrapTable,
+		"🎁 WRAP PRESENTS HERE",
+		UDim2.fromScale(12, 2.6),
+		Vector3.new(0, 6.5, 0),
+		Color3.fromRGB(255, 240, 170),
+		110
+	)
+	-- A bright mat shows where to stand.
+	Build.deco({
+		Name = "WrapMat",
+		Size = Vector3.new(9, 0.2, 5),
+		CFrame = at(tableCF * CFrame.new(0, 0.5, -5.5)),
+		Color = Color3.fromRGB(255, 120, 170),
+		Material = Enum.Material.Neon,
+		Transparency = 0.25,
+		Parent = model,
+	})
+
+	-- Fairy lights strung along the belt and candy canes at the work floor
+	-- corners, so even a brand new workshop looks like Christmas.
+	local bulbColors = {
+		Color3.fromRGB(255, 70, 70),
+		Color3.fromRGB(90, 230, 110),
+		Color3.fromRGB(255, 215, 80),
+		Color3.fromRGB(90, 170, 255),
+	}
+	local k = 0
+	for x = PlotLayout.BELT_START_X + 3, PlotLayout.WRAP_X - 6, 6 do
+		for _, side in { -1, 1 } do
+			k += 1
+			local bulb = Build.ball(
+				model,
+				at(
+					CFrame.new(
+						x + (if side == 1 then 3 else 0),
+						2.5,
+						PlotLayout.BELT_Z + side * 3.3
+					)
+				),
+				0.8,
+				bulbColors[k % #bulbColors + 1],
+				Enum.Material.Neon
+			)
+			bulb:SetAttribute("Phase", k)
+			CollectionService:AddTag(bulb, "Twinkle")
+		end
+	end
+	for _, corner in { { -66, -15 }, { 58, -15 }, { -66, 34 }, { 58, 34 } } do
+		local base = at(CFrame.new(corner[1], 0.4, corner[2]))
+		candyPole(model, base, 12, 1.4)
+		local lamp = Build.ball(
+			model,
+			base * CFrame.new(0, 13, 0),
+			2.4,
+			Color3.fromRGB(255, 225, 150),
+			Enum.Material.Neon
+		)
+		Build.light(lamp, WARM_LIGHT, 22, 1.2)
+	end
+	-- A friendly snowman and a decorated tree welcome visitors at the entrance.
+	local snowmanCF = at(CFrame.new(-17, 0.1, -56) * CFrame.Angles(0, math.rad(200), 0))
+	Build.ball(model, snowmanCF * CFrame.new(0, 2, 0), 4.4, SNOW, Enum.Material.Snow)
+	Build.ball(model, snowmanCF * CFrame.new(0, 5.1, 0), 3.3, SNOW, Enum.Material.Snow)
+	Build.ball(model, snowmanCF * CFrame.new(0, 7.5, 0), 2.4, SNOW, Enum.Material.Snow)
+	for _, ex in { -0.45, 0.45 } do
+		Build.ball(model, snowmanCF * CFrame.new(ex, 7.8, -1.05), 0.3, Color3.fromRGB(30, 30, 40))
+	end
+	Build.cylinder(
+		model,
+		snowmanCF * CFrame.new(0, 7.4, -1.5) * CFrame.Angles(0, math.rad(90), 0),
+		1.2,
+		0.35,
+		Color3.fromRGB(255, 140, 50)
+	)
+	Build.cylinder(
+		model,
+		snowmanCF * CFrame.new(0, 6.5, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		0.5,
+		2.7,
+		RED,
+		Enum.Material.Fabric
+	)
+	Build.cylinder(
+		model,
+		snowmanCF * CFrame.new(0, 8.75, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		0.2,
+		2.8,
+		Color3.fromRGB(30, 30, 40)
+	)
+	Build.cylinder(
+		model,
+		snowmanCF * CFrame.new(0, 9.6, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		1.6,
+		1.8,
+		Color3.fromRGB(30, 30, 40)
+	)
+	for _, side in { -1, 1 } do
+		Build.deco({
+			Size = Vector3.new(3, 0.25, 0.25),
+			CFrame = snowmanCF
+				* CFrame.new(side * 2.6, 5.9, 0)
+				* CFrame.Angles(0, 0, math.rad(side * 35)),
+			Color = WOOD,
+			Parent = model,
+		})
+	end
+	WorldBuilder.pineTree(model, at(CFrame.new(17, 0.1, -56)), 16, true)
 
 	-- Present sack (Workshop scales it with fill)
 	local sx = PlotLayout.SACK_X

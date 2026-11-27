@@ -6,6 +6,7 @@
 -- speed, a per-run "already delivered" set, and run time limits.
 
 local CollectionService = game:GetService("CollectionService")
+local PhysicsService = game:GetService("PhysicsService")
 local Players = game:GetService("Players")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
@@ -121,6 +122,21 @@ local function attachSleigh(player: Player, root: BasePart, reindeer: number): M
 	return sleigh
 end
 
+-- A flying helper passes through everything, so bumping a rooftop, a tall
+-- tree or another sleigh can never knock the sleigh off course.
+local FLY_GROUP = "FlyingSleigh"
+
+local function setFlying(character: Model?, flying: boolean)
+	if not character then
+		return
+	end
+	for _, d in character:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.CollisionGroup = if flying then FLY_GROUP else "Default"
+		end
+	end
+end
+
 function Sleigh.isFlying(player: Player): boolean
 	return runs[player] ~= nil
 end
@@ -137,6 +153,7 @@ local function endRun(player: Player, reason: string)
 	if run.model then
 		run.model:Destroy()
 	end
+	setFlying(player.Character, false)
 	local def = run.route
 	local stars = Economy.starsFor(def, run.count)
 	local perfect = run.count >= run.targets
@@ -254,6 +271,7 @@ function Sleigh.beginRun(player: Player, routeId: unknown): (boolean, any)
 	character:PivotTo(startCF)
 	root.AssemblyLinearVelocity = Vector3.zero
 	local model = attachSleigh(player, root, stats.reindeer)
+	setFlying(character, true)
 
 	local nowTime = os.clock()
 	local run: Run = {
@@ -424,6 +442,9 @@ local function sampleRuns()
 end
 
 function Sleigh.start()
+	PhysicsService:RegisterCollisionGroup(FLY_GROUP)
+	PhysicsService:CollisionGroupSetCollidable(FLY_GROUP, "Default", false)
+	PhysicsService:CollisionGroupSetCollidable(FLY_GROUP, FLY_GROUP, false)
 	game:GetService("RunService").Heartbeat:Connect(sampleRuns)
 	Net.handle("StartDelivery", 0.5, 2, function(player, routeId: unknown)
 		return Sleigh.beginRun(player, routeId)

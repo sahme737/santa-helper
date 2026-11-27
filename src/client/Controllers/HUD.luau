@@ -524,7 +524,10 @@ local function onState(snapshot: any)
 			{ Value = profile.snowflakes }
 		)
 	end
-	incomeLabel.Text = `+{Format.short(snapshot.income.total)}/s`
+	-- Nothing is earned automatically until an elf is hired to wrap.
+	incomeLabel.Text = if profile.elves >= 1
+		then `+{Format.short(snapshot.income.total)}/s`
+		else "🧝 Hire an elf!"
 	local capacity = Economy.sackCapacity(profile.sackLevel)
 	local fill = math.clamp(profile.sack / capacity, 0, 1)
 	UI.tween(sackFill, UI.FAST, { Size = UDim2.fromScale(fill, 1) })

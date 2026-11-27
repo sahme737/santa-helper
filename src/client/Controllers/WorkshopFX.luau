@@ -4,6 +4,7 @@
 -- bobbing, sacks swelling. Only plots near the camera are animated.
 
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
@@ -13,17 +14,29 @@ local Build = require(Shared.Util.Build)
 local PlotLayout = require(Shared.PlotLayout)
 local ToyModels = require(Shared.Models.ToyModels)
 
+local Lib = script.Parent.Parent:WaitForChild("Lib")
+local Bus = require(Lib.Bus)
+
 local WorkshopFX = {}
 
 local ANIMATE_DISTANCE = 230
 local MAX_TOYS_PER_PLOT = 40
 
-type PlotState = { timers: { number }, toys: number }
+type PlotState = { timers: { number }, toys: number, toss: number, pile: number }
 local plotStates: { [Model]: PlotState } = {}
 local spinBase: { [BasePart]: CFrame } = {}
 local bobBase: { [BasePart]: CFrame } = {}
 local elfBase: { [Model]: CFrame } = {}
+local twinkles: { [BasePart]: number } = {}
 local toyFolder: Folder
+
+local BULB_COLORS = {
+	Color3.fromRGB(255, 70, 70),
+	Color3.fromRGB(90, 230, 110),
+	Color3.fromRGB(255, 215, 80),
+	Color3.fromRGB(90, 170, 255),
+	Color3.fromRGB(255, 130, 220),
+}
 
 local function anchoredModel(model: Model): BasePart
 	local root = model.PrimaryPart :: BasePart
@@ -38,7 +51,36 @@ local function anchoredModel(model: Model): BasePart
 	return root
 end
 
-local function rideBelt(plot: Model, plotCF: CFrame, slot: number, toy: string)
+-- Throws a wrapped present in an arc from `from` into `to` (world space).
+local function tossPresent(from: Vector3, to: Vector3, size: number, variant: number?)
+	local present = ToyModels.present(size, variant)
+	local root = anchoredModel(present)
+	present:PivotTo(CFrame.new(from))
+	present.Parent = toyFolder
+	local duration = 0.75
+	local height = 7
+	local spin = math.random() * 4 - 2
+	local t = 0
+	while t < duration and root.Parent do
+		t += RunService.Heartbeat:Wait()
+		local a = math.min(1, t / duration)
+		local pos = from:Lerp(to, a) + Vector3.new(0, math.sin(a * math.pi) * height, 0)
+		root.CFrame = CFrame.new(pos) * CFrame.Angles(a * spin * 3, a * 5, 0)
+	end
+	present:Destroy()
+end
+
+local function sackTop(plotCF: CFrame): Vector3
+	return (plotCF * CFrame.new(PlotLayout.SACK_X, 6.5, PlotLayout.BELT_Z)).Position
+end
+
+local function tableTop(plotCF: CFrame): Vector3
+	return (plotCF * PlotLayout.WRAP_TABLE * CFrame.new(0, 4.3, 0)).Position
+end
+
+-- `auto` = elves are wrapping, so the toy becomes a present and rides on to
+-- the sack. Otherwise it waits on the wrapping table for the player.
+local function rideBelt(plot: Model, plotCF: CFrame, slot: number, toy: string, auto: boolean)
 	local state = plotStates[plot]
 	state.toys += 1
 	local out = PlotLayout.MACHINE_OUTPUT[slot]
@@ -65,6 +107,23 @@ local function rideBelt(plot: Model, plotCF: CFrame, slot: number, toy: string)
 	)
 	ride:Play()
 	ride.Completed:Wait()
+
+	if not auto then
+		-- Hop off the belt onto the wrapping table and wait to be wrapped.
+		state.pile = (state.pile % 5) + 1
+		local spot = PlotLayout.WRAP_TABLE * CFrame.new(-3.2 + state.pile * 1.1, 3.9, -0.9)
+		local toTable = TweenService:Create(
+			root,
+			TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{ CFrame = plotCF * spot * CFrame.Angles(0, state.pile, 0) }
+		)
+		toTable:Play()
+		toTable.Completed:Wait()
+		task.wait(5)
+		model:Destroy()
+		state.toys -= 1
+		return
+	end
 	model:Destroy()
 
 	-- Wrapped!
@@ -105,7 +164,7 @@ local function animatePlots(dt: number, cameraPos: Vector3)
 		end
 		local state = plotStates[plot]
 		if not state then
-			state = { timers = {}, toys = 0 }
+			state = { timers = {}, toys = 0, toss = 1, pile = 0 }
 			plotStates[plot] = state
 		end
 		local ownerId = plot:GetAttribute("OwnerId")
@@ -119,6 +178,7 @@ local function animatePlots(dt: number, cameraPos: Vector3)
 		end
 		local full = plot:GetAttribute("SackFull") == true
 		local elves = plot:GetAttribute("Elves") or 0
+		local auto = elves >= 1
 		for slot, machine in Config.MACHINES do
 			local level = plot:GetAttribute(machine.id)
 			if typeof(level) == "number" and level > 0 and not full then
@@ -126,7 +186,7 @@ local function animatePlots(dt: number, cameraPos: Vector3)
 				if t <= 0 then
 					t = math.max(0.7, machine.interval / (1 + elves * 0.1))
 					if state.toys < MAX_TOYS_PER_PLOT then
-						task.spawn(rideBelt, plot, plotCF, slot, machine.toy)
+						task.spawn(rideBelt, plot, plotCF, slot, machine.toy, auto)
 					end
 				end
 				state.timers[slot] = t
@@ -141,25 +201,56 @@ local function animatePlots(dt: number, cameraPos: Vector3)
 			sack.Size = sack.Size:Lerp(Vector3.new(size, size, size), math.min(1, dt * 4))
 		end
 
-		-- Elves hammer away.
+		-- Elves at the wrapping table wrap and toss presents into the sack;
+		-- the rest hammer away at their machines.
 		local content = plot:FindFirstChild("Content")
 		local elvesFolder = content and content:FindFirstChild("Elves")
 		if elvesFolder then
-			for i, elf in elvesFolder:GetChildren() do
-				if elf:IsA("Model") then
-					local base = elfBase[elf]
-					if not base then
-						base = elf:GetPivot()
-						elfBase[elf] = base
-						elf.Destroying:Once(function()
-							elfBase[elf] = nil
-						end)
-					end
-					local bob = math.abs(math.sin(os.clock() * 6 + i)) * 0.6
+			local now = os.clock()
+			local wrappers = 0
+			for _, elf in elvesFolder:GetChildren() do
+				if not elf:IsA("Model") then
+					continue
+				end
+				local base = elfBase[elf]
+				if not base then
+					base = elf:GetPivot()
+					elfBase[elf] = base
+					elf.Destroying:Once(function()
+						elfBase[elf] = nil
+					end)
+				end
+				local i = tonumber(string.match(elf.Name, "%d+")) or 1
+				if i <= PlotLayout.WRAP_ELVES then
+					wrappers += 1
+					-- Busy hands: quick lean over the table with a little hop.
+					local beat = now * 7 + i * 1.7
+					local lean = (math.sin(beat) * 0.5 + 0.5) * 22
+					local hopY = math.abs(math.sin(beat * 0.5)) * 0.5
+					elf:PivotTo(
+						(base :: CFrame)
+							* CFrame.new(0, hopY, 0)
+							* CFrame.Angles(math.rad(-lean), math.sin(beat * 0.5) * 0.2, 0)
+					)
+				else
+					local bob = math.abs(math.sin(now * 6 + i)) * 0.9
 					elf:PivotTo(
 						(base :: CFrame)
 							* CFrame.new(0, bob, 0)
-							* CFrame.Angles(math.rad(-bob * 12), 0, 0)
+							* CFrame.Angles(math.rad(-bob * 22), 0, 0)
+					)
+				end
+			end
+			if wrappers > 0 and not full then
+				state.toss -= dt
+				if state.toss <= 0 then
+					state.toss = 1.3 / wrappers
+					task.spawn(
+						tossPresent,
+						tableTop(plotCF),
+						sackTop(plotCF),
+						1.5,
+						math.random(1, 6)
 					)
 				end
 			end
@@ -188,12 +279,46 @@ function WorkshopFX.start()
 	toyFolder.Parent = workspace
 	track("Spin", spinBase)
 	track("Bob", bobBase)
+	local function addTwinkle(inst: Instance)
+		if inst:IsA("BasePart") then
+			twinkles[inst] = tonumber(inst:GetAttribute("Phase")) or 0
+		end
+	end
+	for _, inst in CollectionService:GetTagged("Twinkle") do
+		addTwinkle(inst)
+	end
+	CollectionService:GetInstanceAddedSignal("Twinkle"):Connect(addTwinkle)
+	CollectionService:GetInstanceRemovedSignal("Twinkle"):Connect(function(inst)
+		twinkles[inst :: BasePart] = nil
+	end)
+
+	-- The player wrapped a present by hand: it flies from the table to the sack.
+	Bus.on("Wrapped", function()
+		local index = Players.LocalPlayer:GetAttribute("Plot")
+		if typeof(index) ~= "number" then
+			return
+		end
+		local plotCF = PlotLayout.plotCFrame(index, Config.MAX_PLOTS)
+		tossPresent(tableTop(plotCF), sackTop(plotCF), 1.8, math.random(1, 6))
+	end)
+
+	local twinkleStep = -1
 
 	RunService.Heartbeat:Connect(function(dt)
 		local camera = workspace.CurrentCamera
 		local cameraPos = if camera then camera.CFrame.Position else Vector3.zero
 		animatePlots(dt, cameraPos)
 		local t = os.clock()
+		-- Fairy lights change colour twice a second, each bulb out of step.
+		local beat = math.floor(t * 2)
+		if beat ~= twinkleStep then
+			twinkleStep = beat
+			for part, phase in twinkles do
+				if part.Parent and (part.Position - cameraPos).Magnitude < 260 then
+					part.Color = BULB_COLORS[(beat + phase) % #BULB_COLORS + 1]
+				end
+			end
+		end
 		for part, base in spinBase do
 			if part.Parent and (part.Position - cameraPos).Magnitude < 300 then
 				part.CFrame = if part:GetAttribute("SpinY")

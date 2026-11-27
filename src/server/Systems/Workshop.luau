@@ -29,6 +29,7 @@ local TICK = 0.5
 local plotOwner: { [number]: Player } = {}
 local playerPlot: { [Player]: number } = {}
 local lastLoad: { [Player]: number } = {}
+local lastWrap: { [Player]: number } = {}
 local lastPadTouch: { [Player]: { [string]: number } } = {}
 
 local rushActive = false
@@ -535,7 +536,11 @@ local function refreshPads(player: Player, profile: Profile)
 		setPadLabel(
 			plot,
 			"PadElf",
-			`🧝 Hire Elf #{profile.elves + 1}\n{Format.short(Economy.elfCost(profile.elves))} Cheer  (+10%)`,
+			if profile.elves == 0
+				then `🧝 Hire an Elf\n{Format.short(Economy.elfCost(0))} Cheer\nWraps presents for you!`
+				else `🧝 Hire Elf #{profile.elves + 1}\n{Format.short(
+					Economy.elfCost(profile.elves)
+				)} Cheer  (+10%)`,
 			true
 		)
 	else
@@ -788,6 +793,9 @@ function Workshop.hireElf(player: Player): (boolean, string?)
 		renderElves(plotIndex, profile)
 	end
 	afterChange(player, profile)
+	if profile.elves == 1 then
+		return true, "Your first elf is wrapping presents for you now!"
+	end
 	return true, `Elf #{profile.elves} joined your workshop!`
 end
 
@@ -893,6 +901,38 @@ function Workshop.loadSleigh(player: Player, auto: boolean): boolean
 	return true
 end
 
+-- The player wraps one present by hand at their wrapping table.
+function Workshop.wrap(player: Player): (boolean, any)
+	local profile = PlayerData.get(player)
+	local index = playerPlot[player]
+	if not profile or not index then
+		return false, nil
+	end
+	local now = os.clock()
+	if now - (lastWrap[player] or 0) < Config.WRAP.COOLDOWN then
+		return false, nil
+	end
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root or not root:IsA("BasePart") then
+		return false, nil
+	end
+	local tablePos = (plotCFrame(index) * PlotLayout.WRAP_TABLE).Position
+	if (root.Position - tablePos).Magnitude > Config.WRAP.REACH then
+		return false, "Stand at your wrapping table"
+	end
+	local capacity = Economy.sackCapacity(profile.sackLevel)
+	if profile.sack >= capacity then
+		return false, "Your sack is full! Step on the green LOAD pad"
+	end
+	lastWrap[player] = now
+	local value = Economy.wrapValue(profile, PlayerState.ctx(player))
+	profile.sack = math.min(capacity, profile.sack + value)
+	PlayerState.dirty(player)
+	renderSack(index, profile)
+	return true, value
+end
+
 function Workshop.setRush(active: boolean, multiplier: number)
 	rushActive = active
 	Workshop.rushMultiplier = multiplier
@@ -993,6 +1033,7 @@ local function releasePlot(player: Player)
 	end
 	playerPlot[player] = nil
 	lastLoad[player] = nil
+	lastWrap[player] = nil
 	lastPadTouch[player] = nil
 end
 
@@ -1012,9 +1053,12 @@ local function productionTick(dt: number)
 		if profile then
 			local capacity = Economy.sackCapacity(profile.sackLevel)
 			if profile.sack < capacity then
-				local income = Economy.incomePerSecond(profile, PlayerState.ctx(player))
-				profile.sack = math.min(capacity, profile.sack + income * dt)
-				PlayerState.tickDirty(player)
+				-- Nobody wraps the toys until the first elf is hired.
+				local income = Economy.autoIncome(profile, PlayerState.ctx(player))
+				if income > 0 then
+					profile.sack = math.min(capacity, profile.sack + income * dt)
+					PlayerState.tickDirty(player)
+				end
 			end
 			if renderSacks then
 				renderSack(index, profile)
@@ -1074,6 +1118,9 @@ function Workshop.start()
 			return false, "Unknown decoration"
 		end
 		return Workshop.buyDecor(player, id)
+	end)
+	Net.handle("Wrap", 5, 8, function(player)
+		return Workshop.wrap(player)
 	end)
 	Net.handle("HireElf", 3, 5, function(player)
 		return Workshop.hireElf(player)
