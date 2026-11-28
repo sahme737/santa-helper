@@ -8,6 +8,7 @@
 -- Also the "Play" list that takes the player to any attraction.
 
 local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -35,7 +36,8 @@ local RINK = PLAY.RINK
 local RAIL_Y = 0.6
 local RIDER_SCALE = 0.9
 local DEER_SCALE = 1.25
-local SEATED_ROOT = 1.5 -- how far a seated player's root sits above the seat
+local SEATED_ROOT = 1.5 -- how far a seated player's root sits above a bench
+local SADDLE_ROOT = 1.1 -- ...and above a reindeer's back
 
 type Rider = { model: Model, seat: CFrame, offset: number }
 type Car = { root: BasePart, lag: number, riders: { Rider } }
@@ -300,8 +302,11 @@ end
 local function stepSkaters(t: number)
 	for _, s in skaters do
 		local u = t * s.speed + s.phase
-		local pos =
-			Vector3.new(RINK.CENTER.X + math.cos(u) * s.a, 0.3, RINK.CENTER.Z + math.sin(u) * s.b)
+		local pos = Vector3.new(
+			RINK.CENTER.X + math.cos(u) * s.a,
+			RINK.ICE_Y,
+			RINK.CENTER.Z + math.sin(u) * s.b
+		)
 		local direction = if s.speed >= 0 then 1 else -1
 		local heading = Vector3.new(-math.sin(u) * s.a, 0, math.cos(u) * s.b) * direction
 		local cf = CFrame.lookAt(pos, pos + heading)
@@ -336,6 +341,7 @@ local function endRide()
 	end
 	ride = nil
 	chip.Visible = false
+	ProximityPromptService.Enabled = true
 	local root, humanoid = rootAndHumanoid()
 	if root and humanoid then
 		root.Anchored = false
@@ -390,9 +396,11 @@ local function startRide(kind: "Train" | "Carousel")
 	end
 	ride = { kind = kind, seat = seat, endsAt = t + duration, startedAt = t }
 	chipLabel.Text = if kind == "Train"
-		then "🚂 All aboard the North Pole Express!  Jump to hop off"
-		else "🎠 Round and round!  Jump to hop off"
+		then "🚂 All aboard the North Pole Express!"
+		else "🎠 Round and round we go!"
 	chip.Visible = true
+	-- No "Ride the ..." prompts floating in view during the ride.
+	ProximityPromptService.Enabled = false
 	UI.pop(chip, 1.2)
 	UI.sound("Purchase", 0.5)
 end
@@ -406,6 +414,7 @@ local function stepRide(t: number)
 	if not root or not humanoid or humanoid.Health <= 0 or flying then
 		ride = nil
 		chip.Visible = false
+		ProximityPromptService.Enabled = true
 		return
 	end
 	if t >= r.endsAt then
@@ -414,7 +423,8 @@ local function stepRide(t: number)
 	end
 	root.Anchored = true
 	humanoid.Sit = true
-	root.CFrame = seatCFrame(r, t) * CFrame.new(0, SEATED_ROOT, 0)
+	root.CFrame = seatCFrame(r, t)
+		* CFrame.new(0, if r.kind == "Train" then SEATED_ROOT else SADDLE_ROOT, 0)
 	root.AssemblyLinearVelocity = Vector3.zero
 end
 
@@ -491,12 +501,25 @@ function Rides.init()
 	UI.stroke(chip, T.Gold, 1.5)
 	chipLabel = UI.text({
 		Text = "",
-		Size = UDim2.fromScale(0.94, 0.76),
+		Size = UDim2.fromScale(0.66, 0.76),
 		Position = UDim2.fromScale(0.03, 0.12),
 		MaxTextSize = 22,
 		Parent = chip,
 	})
 	UI.textStroke(chipLabel, T.Ink, 1.5)
+	UI.button({
+		Name = "HopOff",
+		Text = "Hop off",
+		Color = T.Red,
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.fromScale(0.985, 0.5),
+		Size = UDim2.fromScale(0.27, 0.8),
+		MaxTextSize = 20,
+		Parent = chip,
+		OnClick = function()
+			endRide()
+		end,
+	})
 	buildPanel()
 	Bus.on("Flying", function(value: boolean)
 		flying = value
@@ -523,10 +546,19 @@ function Rides.start()
 	buildCarousel()
 	buildSkaters()
 
-	UserInputService.JumpRequest:Connect(function()
+	-- Hop off with the button, or by jumping (Space, gamepad A, the touch
+	-- jump button). The first second is ignored so the key that bought the
+	-- ticket cannot also end the ride.
+	local function hopOff()
 		local r = ride
 		if r and now() - r.startedAt > 1 then
 			endRide()
+		end
+	end
+	UserInputService.JumpRequest:Connect(hopOff)
+	UserInputService.InputBegan:Connect(function(input)
+		if input.KeyCode == Enum.KeyCode.Space or input.KeyCode == Enum.KeyCode.ButtonA then
+			hopOff()
 		end
 	end)
 

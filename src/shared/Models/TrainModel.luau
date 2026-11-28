@@ -1,5 +1,5 @@
 --!strict
--- The North Pole Express: a chunky engine and open coaches with benches.
+-- The North Pole Express: a chunky engine and open-top coaches with benches.
 -- Purely visual, built on each client. Models face -Z, pivot on the rails,
 -- and every part is welded to an anchored Root so one CFrame moves it all.
 
@@ -198,21 +198,20 @@ function TrainModel.coach(index: number): Model
 			Enum.Material.WoodPlanks
 		)
 	end
-	-- Roof with snow and fairy lights.
-	box(model, Vector3.new(7.4, 0.5, 11.8), CFrame.new(0, 8.2, 0), color)
-	box(
-		model,
-		Vector3.new(7.6, 0.3, 12),
-		CFrame.new(0, 8.6, 0),
-		Color3.new(1, 1, 1),
-		Enum.Material.Snow
-	)
-	for k = 0, 5 do
-		for _, side in { -1, 1 } do
+	-- Open top, so riders can see out (and the camera can see them): just a
+	-- string of fairy lights along each side between the corner posts.
+	for _, side in { -1, 1 } do
+		box(
+			model,
+			Vector3.new(0.3, 0.3, 10.8),
+			CFrame.new(3.05 * side, 7.9, 0),
+			Color3.new(1, 1, 1)
+		)
+		for k = 0, 5 do
 			Build.ball(
 				model,
-				CFrame.new(3.75 * side, 7.8, -5 + k * 2),
-				0.55,
+				CFrame.new(3.05 * side, 7.4, -5 + k * 2),
+				0.6,
 				BULBS[(k + index) % #BULBS + 1],
 				Enum.Material.Neon
 			)

@@ -35,7 +35,7 @@ local PLACES: { [string]: { at: Vector3, look: Vector3 } } = {
 	},
 	Train = { at = STATION + Vector3.new(0, 1.2, 0), look = Vector3.zero },
 	Carousel = {
-		at = plazaSide(PLAY.CAROUSEL.CENTER, PLAY.CAROUSEL.RADIUS + 12),
+		at = plazaSide(PLAY.CAROUSEL.CENTER, PLAY.CAROUSEL.RADIUS + 7),
 		look = PLAY.CAROUSEL.CENTER,
 	},
 	Rink = { at = plazaSide(PLAY.RINK.CENTER, PLAY.RINK.RADIUS - 6), look = PLAY.RINK.CENTER },

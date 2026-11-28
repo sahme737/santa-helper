@@ -154,7 +154,8 @@ Config.WRAP = {
 -- The snowball fight arena beside the plaza. Free for everyone from the
 -- first minute; nothing is earned there, it is just for fun.
 Config.SNOWBALL = {
-	CENTER = Vector3.new(0, 0.2, 182),
+	-- Y is the arena floor, just above the slate path that runs under it.
+	CENTER = Vector3.new(0, 0.62, 182),
 	RADIUS = 32,
 	COOLDOWN = 0.4, -- seconds between throws
 	SPEED = 95, -- studs per second for a player's throw
@@ -185,6 +186,7 @@ Config.PLAYGROUND = {
 	RINK = {
 		CENTER = Vector3.new(161, 0, 93),
 		RADIUS = 24,
+		ICE_Y = 0.62, -- top of the ice, just above the slate path under it
 	},
 }
 

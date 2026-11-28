@@ -1925,8 +1925,8 @@ local function buildSnowArena(hub: Instance)
 	Build.part({
 		Name = "ArenaFloor",
 		Shape = Enum.PartType.Cylinder,
-		Size = Vector3.new(0.4, radius * 2 + 4, radius * 2 + 4),
-		CFrame = base * CFrame.new(0, 0, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		Size = Vector3.new(0.5, radius * 2 + 4, radius * 2 + 4),
+		CFrame = base * CFrame.new(0, centre.Y - 0.25, 0) * CFrame.Angles(0, 0, math.rad(90)),
 		Color = Color3.fromRGB(215, 235, 255),
 		Material = Enum.Material.Snow,
 		Parent = model,
@@ -2157,7 +2157,8 @@ local function buildPlayground(hub: Instance)
 		Name = "IceRink",
 		Shape = Enum.PartType.Cylinder,
 		Size = Vector3.new(0.5, rink.RADIUS * 2, rink.RADIUS * 2),
-		CFrame = CFrame.new(rink.CENTER.X, 0.05, rink.CENTER.Z) * CFrame.Angles(0, 0, math.rad(90)),
+		CFrame = CFrame.new(rink.CENTER.X, rink.ICE_Y - 0.25, rink.CENTER.Z)
+			* CFrame.Angles(0, 0, math.rad(90)),
 		Color = Color3.fromRGB(170, 220, 255),
 		Material = Enum.Material.Ice,
 		Parent = model,
