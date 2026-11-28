@@ -163,6 +163,31 @@ Config.SNOWBALL = {
 	BOTS = 5,
 }
 
+-- Christmas Playground attractions around the plaza. Rides cost a little
+-- Cheer; the rink and the snowball arena are free.
+Config.PLAYGROUND = {
+	TRAIN = {
+		RADIUS = 136, -- track circle round the plaza
+		SPEED = 22, -- studs per second
+		COST = 25,
+		CARS = 4,
+		CAR_SPACING = 12,
+		STATION_ANGLE = 285, -- degrees round the plaza
+	},
+	CAROUSEL = {
+		CENTER = Vector3.new(161, 0, -93),
+		RADIUS = 11,
+		SPIN = 0.55, -- radians per second
+		COST = 10,
+		SEATS = 8,
+		DURATION = 30,
+	},
+	RINK = {
+		CENTER = Vector3.new(161, 0, 93),
+		RADIUS = 24,
+	},
+}
+
 Config.SACK = {
 	MAX_LEVEL = 20,
 	BASE_CAPACITY = 1000,

@@ -16,6 +16,7 @@ local Rewards = require(Systems.Rewards)
 local Shop = require(Systems.Shop)
 local Leaderboards = require(Systems.Leaderboards)
 local Snowball = require(Systems.Snowball)
+local Playground = require(Systems.Playground)
 
 WorldBuilder.init()
 
@@ -30,6 +31,7 @@ Rewards.start()
 Shop.start()
 Leaderboards.start()
 Snowball.start()
+Playground.start()
 
 PlayerData.start()
 

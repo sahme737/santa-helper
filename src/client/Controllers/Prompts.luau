@@ -20,6 +20,10 @@ function Prompts.start()
 			Bus.fire("OpenMenu", "Wardrobe", "Hats")
 		elseif kind == "Sleigh" then
 			Bus.fire("StartDelivery")
+		elseif kind == "TrainRide" then
+			Bus.fire("Ride", "Train")
+		elseif kind == "CarouselRide" then
+			Bus.fire("Ride", "Carousel")
 		end
 	end)
 end

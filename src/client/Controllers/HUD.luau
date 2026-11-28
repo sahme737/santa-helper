@@ -396,16 +396,12 @@ local function build()
 			Net.request("GoHome")
 		end)
 	)
-	-- The snowball arena is open to everyone from the first minute.
+	-- The playground (snowball fight, train, carousel, rink) is open to
+	-- everyone from the first minute.
 	add(
 		0,
-		menuButton(menu, 8, "❄️", "Snowball", Color3.fromRGB(70, 150, 220), function()
-			task.spawn(function()
-				local ok, message = Net.request("GoArena")
-				if not ok and typeof(message) == "string" then
-					HUD.toast(message, "error")
-				end
-			end)
+		menuButton(menu, 8, "🎡", "Play", Color3.fromRGB(70, 150, 220), function()
+			Bus.fire("OpenPlay")
 		end)
 	)
 

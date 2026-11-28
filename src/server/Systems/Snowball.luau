@@ -1,8 +1,8 @@
 --!strict
 -- Snowball fight arena. Bots and the player's own throws are simulated on
 -- each client (they are only for fun and earn nothing). The server only
--- teleports players to the arena and relays throws and hits between real
--- players, after checking that both are really there.
+-- relays throws and hits between real players, after checking that both
+-- are really there. (Playground handles the teleport to the arena.)
 
 local Players = game:GetService("Players")
 
@@ -40,16 +40,6 @@ local function finite(v: Vector3): boolean
 end
 
 function Snowball.start()
-	Net.handle("GoArena", 0.5, 2, function(player)
-		local character = player.Character
-		if not character or character:FindFirstChild("DeliverySleigh") then
-			return false, "Finish your delivery first"
-		end
-		local at = ARENA.CENTER + Vector3.new(0, 3.5, -(ARENA.RADIUS - 8))
-		character:PivotTo(CFrame.lookAt(at, Vector3.new(ARENA.CENTER.X, at.Y, ARENA.CENTER.Z)))
-		return true, nil
-	end)
-
 	-- Show my throw to the other players nearby.
 	Net.handle("SnowballThrow", 3, 4, function(player, origin: unknown, velocity: unknown)
 		if typeof(origin) ~= "Vector3" or typeof(velocity) ~= "Vector3" then
