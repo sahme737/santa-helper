@@ -632,7 +632,12 @@ local function onHeartbeat()
 		boostChip.Visible = false
 	end
 	-- The sack only matters while working in the workshop.
-	sackFrame.Visible = Where.atWorkshop()
+	local atWorkshop = Where.atWorkshop()
+	sackFrame.Visible = atWorkshop
+	-- So do the sleigh timer, event banner and server goal.
+	local workshopExtras = atWorkshop and stage >= Economy.STAGE_ALL
+	topFrame.Visible = workshopExtras and not flying
+	goalFrame.Visible = workshopExtras
 	if profile and State.data then
 		local capacity = Economy.sackCapacity(profile.sackLevel)
 		sackFrame.BackgroundColor3 = if profile.sack >= capacity
