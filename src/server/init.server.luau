@@ -15,6 +15,7 @@ local Pets = require(Systems.Pets)
 local Rewards = require(Systems.Rewards)
 local Shop = require(Systems.Shop)
 local Leaderboards = require(Systems.Leaderboards)
+local Snowball = require(Systems.Snowball)
 
 WorldBuilder.init()
 
@@ -28,6 +29,7 @@ Pets.start()
 Rewards.start()
 Shop.start()
 Leaderboards.start()
+Snowball.start()
 
 PlayerData.start()
 

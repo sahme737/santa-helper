@@ -210,7 +210,7 @@ local function menuButton(
 	local b = UI.button({
 		Text = "",
 		Color = color,
-		Size = UDim2.fromScale(1, 0.13),
+		Size = UDim2.fromScale(1, 0.115),
 		LayoutOrder = order,
 		Parent = parent,
 		OnClick = onClick,
@@ -391,9 +391,21 @@ local function build()
 		end)
 	)
 	add(
-		Economy.STAGE_MACHINES,
+		0,
 		menuButton(menu, 7, "🏠", "Home", Color3.fromRGB(90, 90, 110), function()
 			Net.request("GoHome")
+		end)
+	)
+	-- The snowball arena is open to everyone from the first minute.
+	add(
+		0,
+		menuButton(menu, 8, "❄️", "Snowball", Color3.fromRGB(70, 150, 220), function()
+			task.spawn(function()
+				local ok, message = Net.request("GoArena")
+				if not ok and typeof(message) == "string" then
+					HUD.toast(message, "error")
+				end
+			end)
 		end)
 	)
 

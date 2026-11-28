@@ -14,6 +14,7 @@ local ORDER = {
 	"SleighFlight",
 	"WorkshopFX",
 	"WorldLife",
+	"Snowball",
 	"PetFollow",
 	"Snowfall",
 	"Prompts",

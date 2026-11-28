@@ -151,6 +151,18 @@ Config.WRAP = {
 	REACH = 20, -- studs from the table
 }
 
+-- The snowball fight arena beside the plaza. Free for everyone from the
+-- first minute; nothing is earned there, it is just for fun.
+Config.SNOWBALL = {
+	CENTER = Vector3.new(0, 0.2, 182),
+	RADIUS = 32,
+	COOLDOWN = 0.4, -- seconds between throws
+	SPEED = 95, -- studs per second for a player's throw
+	BOT_SPEED = 58,
+	GRAVITY = 60,
+	BOTS = 5,
+}
+
 Config.SACK = {
 	MAX_LEVEL = 20,
 	BASE_CAPACITY = 1000,

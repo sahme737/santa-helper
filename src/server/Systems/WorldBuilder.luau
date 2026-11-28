@@ -1913,6 +1913,118 @@ end
 
 --------------------------------------------------------------------------------
 
+-- The snowball arena: a ring of snow walls with gaps to walk in, snow forts
+-- for cover and an arch facing the plaza. The fight itself (bots, throwing)
+-- runs in the client Snowball controller.
+local function buildSnowArena(hub: Instance)
+	local model = Instance.new("Model")
+	model.Name = "SnowArena"
+	local centre = Config.SNOWBALL.CENTER
+	local radius = Config.SNOWBALL.RADIUS
+	local base = CFrame.new(centre.X, 0, centre.Z)
+	Build.part({
+		Name = "ArenaFloor",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.4, radius * 2 + 4, radius * 2 + 4),
+		CFrame = base * CFrame.new(0, 0, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(215, 235, 255),
+		Material = Enum.Material.Snow,
+		Parent = model,
+	})
+	-- Wall ring with four gaps (towards the plaza, away from it, and each side).
+	local blocks = 28
+	for k = 0, blocks - 1 do
+		local a = k / blocks * math.pi * 2
+		local nearGap = false
+		for _, gap in { 0, 90, 180, 270 } do
+			local diff = math.abs((math.deg(a) - gap + 180) % 360 - 180)
+			if diff < 14 then
+				nearGap = true
+			end
+		end
+		if not nearGap then
+			local pos = Vector3.new(math.cos(a) * (radius + 1), 1.6, math.sin(a) * (radius + 1))
+			Build.part({
+				Name = "SnowWall",
+				Size = Vector3.new(8, 3.2 + (k % 3) * 0.5, 3),
+				CFrame = base * CFrame.new(pos) * CFrame.Angles(0, -a + math.rad(90), 0),
+				Color = SNOW,
+				Material = Enum.Material.Snow,
+				Parent = model,
+			})
+		end
+	end
+	-- Snow forts to hide behind.
+	for i, spot in
+		{
+			{ -14, -10, 20 },
+			{ 13, -12, -25 },
+			{ 0, 2, 90 },
+			{ -16, 12, -30 },
+			{ 15, 13, 35 },
+		}
+	do
+		local cf = base * CFrame.new(spot[1], 0, spot[2]) * CFrame.Angles(0, math.rad(spot[3]), 0)
+		Build.part({
+			Name = "SnowFort",
+			Size = Vector3.new(9, 4, 2.4),
+			CFrame = cf * CFrame.new(0, 2, 0),
+			Color = SNOW,
+			Material = Enum.Material.Snow,
+			Parent = model,
+		})
+		for _, side in { -1, 1 } do
+			Build.ball(
+				model,
+				cf * CFrame.new(side * 3, 4.4, 0),
+				1.6 + (i % 2) * 0.4,
+				SNOW,
+				Enum.Material.Snow
+			)
+		end
+	end
+	-- Entrance arch facing the plaza (the plaza is towards -Z from here).
+	local gate = base * CFrame.new(0, 0, -(radius + 2))
+	for _, side in { -1, 1 } do
+		candyPole(model, gate * CFrame.new(side * 9, 0.2, 0), 13, 1.4)
+		local lamp = Build.ball(
+			model,
+			gate * CFrame.new(side * 9, 14.2, 0),
+			2.2,
+			Color3.fromRGB(190, 230, 255),
+			Enum.Material.Neon
+		)
+		Build.light(lamp, Color3.fromRGB(190, 230, 255), 26, 1.4)
+	end
+	sign(
+		model,
+		gate * CFrame.new(0, 12, 0),
+		"❄ SNOWBALL FIGHT ❄",
+		17,
+		3.6,
+		Color3.fromRGB(50, 120, 210),
+		Color3.new(1, 1, 1)
+	)
+	-- Piles of ready-made snowballs by the gate.
+	for _, side in { -1, 1 } do
+		for k = 1, 5 do
+			Build.ball(
+				model,
+				gate
+					* CFrame.new(
+						side * 6 + (k % 3 - 1) * 0.9,
+						0.7 + (k % 2) * 0.7,
+						3 + (k % 2) * 0.8
+					),
+				1.3,
+				SNOW,
+				Enum.Material.Snow
+			)
+		end
+	end
+	model.Parent = hub
+end
+
 function WorldBuilder.init()
 	buildLighting()
 	local world = Instance.new("Folder")
@@ -1926,6 +2038,7 @@ function WorldBuilder.init()
 	buildLeaderboards(hub)
 	buildRunway(hub)
 	buildEventSign(hub)
+	buildSnowArena(hub)
 
 	local plots = folder("Plots", workspace)
 	for i = 1, Config.MAX_PLOTS do
