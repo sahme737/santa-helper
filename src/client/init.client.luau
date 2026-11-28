@@ -13,6 +13,7 @@ local ORDER = {
 	"WrapStation",
 	"SleighFlight",
 	"WorkshopFX",
+	"WorldLife",
 	"PetFollow",
 	"Snowfall",
 	"Prompts",

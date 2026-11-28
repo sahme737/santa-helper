@@ -43,7 +43,15 @@ local rankLabel: TextLabel
 local rankFill: Frame
 local rankFrame: Frame
 local musicButton: TextButton
+local snowFrame: Frame
+local topFrame: Frame
+local goalFrame: Frame
 local lastRank = 0
+local flying = false
+-- How much of the HUD is shown; grows with Economy.stage so new helpers see
+-- only their Cheer and their sack.
+local stage = -1
+local menuButtons: { { button: TextButton, stage: number } } = {}
 
 local function counter(
 	parent: Instance,
@@ -220,7 +228,28 @@ local function menuButton(
 		Parent = b,
 	})
 	UI.textStroke(caption, T.Ink, 1.2)
+	b.Visible = false
 	return b
+end
+
+local function applyStage(newStage: number)
+	if newStage == stage then
+		return
+	end
+	local first = stage < 0
+	stage = newStage
+	for _, entry in menuButtons do
+		local visible = stage >= entry.stage
+		if visible and not entry.button.Visible and not first then
+			entry.button.Visible = true
+			UI.pop(entry.button, 1.3)
+		else
+			entry.button.Visible = visible
+		end
+	end
+	snowFrame.Visible = stage >= Economy.STAGE_ALL
+	goalFrame.Visible = stage >= Economy.STAGE_ALL
+	topFrame.Visible = stage >= Economy.STAGE_ALL and not flying
 end
 
 local function build()
@@ -250,7 +279,8 @@ local function build()
 	coinFrame = cf
 	coinLabel = cl
 	incomeLabel = il :: TextLabel
-	local _, sl, ssub = counter(left, 2, "❄", Color3.fromRGB(150, 210, 255))
+	local sf, sl, ssub = counter(left, 2, "❄", Color3.fromRGB(150, 210, 255))
+	snowFrame = sf
 	snowLabel = sl;
 	(ssub :: TextLabel).Text = "Snowflakes"
 
@@ -313,15 +343,25 @@ local function build()
 		"UIListLayout",
 		{ Padding = UDim.new(0.012, 0), SortOrder = Enum.SortOrder.LayoutOrder, Parent = menu }
 	)
-	menuButton(menu, 1, "🔨", "Workshop", T.Red, function()
-		Bus.fire("OpenMenu", "Workshop")
-	end)
-	menuButton(menu, 2, "🦌", "Reindeer", Color3.fromRGB(150, 100, 60), function()
-		Bus.fire("OpenMenu", "Pets")
-	end)
+	local function add(unlock: number, button: TextButton)
+		table.insert(menuButtons, { button = button, stage = unlock })
+	end
+	add(
+		Economy.STAGE_ELVES,
+		menuButton(menu, 1, "🔨", "Workshop", T.Red, function()
+			Bus.fire("OpenMenu", "Workshop")
+		end)
+	)
+	add(
+		Economy.STAGE_ALL,
+		menuButton(menu, 2, "🦌", "Reindeer", Color3.fromRGB(150, 100, 60), function()
+			Bus.fire("OpenMenu", "Pets")
+		end)
+	)
 	local gifts = menuButton(menu, 3, "🎁", "Gifts", T.Green, function()
 		Bus.fire("OpenMenu", "Gifts")
 	end)
+	add(Economy.STAGE_ALL, gifts)
 	giftBadge = UI.make("Frame", {
 		Size = UDim2.fromScale(0.3, 0.3),
 		Position = UDim2.fromScale(0.78, -0.08),
@@ -332,18 +372,30 @@ local function build()
 	UI.corner(giftBadge, 100)
 	UI.stroke(giftBadge, Color3.new(1, 1, 1), 2)
 	UI.text({ Text = "!", Parent = giftBadge })
-	menuButton(menu, 4, "🧶", "Wardrobe", T.Purple, function()
-		Bus.fire("OpenMenu", "Wardrobe")
-	end)
-	menuButton(menu, 5, "🛷", "Deliver", T.Blue, function()
-		Bus.fire("StartDelivery")
-	end)
-	menuButton(menu, 6, "💎", "Store", Color3.fromRGB(230, 160, 30), function()
-		Bus.fire("OpenMenu", "Store")
-	end)
-	menuButton(menu, 7, "🏠", "Home", Color3.fromRGB(90, 90, 110), function()
-		Net.request("GoHome")
-	end)
+	add(
+		Economy.STAGE_ALL,
+		menuButton(menu, 4, "🧶", "Wardrobe", T.Purple, function()
+			Bus.fire("OpenMenu", "Wardrobe")
+		end)
+	)
+	add(
+		Economy.STAGE_FLY,
+		menuButton(menu, 5, "🛷", "Deliver", T.Blue, function()
+			Bus.fire("StartDelivery")
+		end)
+	)
+	add(
+		Economy.STAGE_ALL,
+		menuButton(menu, 6, "💎", "Store", Color3.fromRGB(230, 160, 30), function()
+			Bus.fire("OpenMenu", "Store")
+		end)
+	)
+	add(
+		Economy.STAGE_MACHINES,
+		menuButton(menu, 7, "🏠", "Home", Color3.fromRGB(90, 90, 110), function()
+			Net.request("GoHome")
+		end)
+	)
 
 	-- Top center banner
 	local top: Frame = UI.make("Frame", {
@@ -354,9 +406,12 @@ local function build()
 		Parent = screen,
 	})
 	UI.make("UISizeConstraint", { MaxSize = Vector2.new(520, 110), Parent = top })
+	top.Visible = false
+	topFrame = top
 	-- The flight HUD takes this spot while the sleigh is in the air.
-	Bus.on("Flying", function(flying: boolean)
-		top.Visible = not flying
+	Bus.on("Flying", function(value: boolean)
+		flying = value
+		top.Visible = not value and stage >= Economy.STAGE_ALL
 	end)
 	bannerLabel = UI.text({
 		Text = "",
@@ -394,9 +449,8 @@ local function build()
 		Parent = screen,
 	})
 	UI.make("UISizeConstraint", { MaxSize = Vector2.new(280, 70), Parent = goal })
-	left:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-		goal.Position = UDim2.new(1, -12, 0, 8 + left.AbsoluteSize.Y + 8)
-	end)
+	goal.Visible = false
+	goalFrame = goal
 
 	-- Helper Rank (under the server goal): level, title and XP bar
 	rankFrame = UI.make("Frame", {
@@ -430,19 +484,23 @@ local function build()
 	})
 	UI.textStroke(rankLabel, T.Ink, 1.5)
 
-	-- Music on/off, tucked left of the server goal
+	-- Music on/off, tucked left of the currencies
 	musicButton = UI.button({
 		Text = "🎵",
 		Color = Color3.fromRGB(60, 50, 70),
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.fromOffset(-8, 0),
+		Position = UDim2.new(1, -20 - left.AbsoluteSize.X, 0, 8),
 		Size = UDim2.fromOffset(40, 40),
-		Parent = goal,
+		Parent = screen,
 		MaxTextSize = 24,
 		OnClick = function()
 			Bus.fire("ToggleMusic")
 		end,
 	})
+	left:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+		goal.Position = UDim2.new(1, -12, 0, 8 + left.AbsoluteSize.Y + 8)
+		musicButton.Position = UDim2.new(1, -20 - left.AbsoluteSize.X, 0, 8)
+	end)
 	UI.corner(goal, 12)
 	UI.stroke(goal, T.Purple, 2)
 	goalLabel = UI.text({
@@ -514,6 +572,7 @@ end
 
 local function onState(snapshot: any)
 	local profile = snapshot.profile
+	applyStage(Economy.stage(profile))
 	if math.abs(coinValue.Value - profile.coins) > 0.5 then
 		UI.tween(coinValue, TweenInfo.new(0.45, Enum.EasingStyle.Quad), { Value = profile.coins })
 	end
@@ -527,12 +586,12 @@ local function onState(snapshot: any)
 	-- Nothing is earned automatically until an elf is hired to wrap.
 	incomeLabel.Text = if profile.elves >= 1
 		then `+{Format.short(snapshot.income.total)}/s`
-		else "🧝 Hire an elf!"
+		else "Cheer"
 	local capacity = Economy.sackCapacity(profile.sackLevel)
 	local fill = math.clamp(profile.sack / capacity, 0, 1)
 	UI.tween(sackFill, UI.FAST, { Size = UDim2.fromScale(fill, 1) })
 	if fill >= 1 then
-		sackLabel.Text = "🎁 SACK FULL! Load your sleigh!"
+		sackLabel.Text = "🎁 Sack full! Load your sleigh"
 		sackFill.BackgroundColor3 = T.Red
 	else
 		sackLabel.Text = `🎁 Sack {Format.short(profile.sack)} / {Format.short(capacity)}`
@@ -621,6 +680,10 @@ function HUD.start()
 	RunService.Heartbeat:Connect(onHeartbeat)
 
 	Net.on("Toast", function(payload)
+		-- Server-wide news waits until the helper knows the game.
+		if payload.kind == "event" and stage < Economy.STAGE_ALL then
+			return
+		end
 		HUD.toast(payload.text, payload.kind)
 	end)
 	Bus.on("Toast", function(text: string, kind: string?)
@@ -658,14 +721,17 @@ function HUD.start()
 			HUD.announce(`🔨 {payload.name}!`, T.Gold)
 		elseif payload.kind == "Rebirth" then
 			HUD.announce(`⭐ NEW SEASON #{payload.rebirths}! ⭐`, T.Gold)
-		elseif payload.kind == "Community" then
+		elseif payload.kind == "Community" and stage >= Economy.STAGE_ALL then
 			HUD.announce("🎉 SERVER GOAL REACHED! 🎉", Color3.fromRGB(200, 150, 255))
-		elseif payload.kind == "RankUp" then
-			HUD.announce(`🎖 RANK UP! Lv.{payload.rank} {payload.title}`, T.Gold)
+		elseif payload.kind == "RankUp" and stage >= Economy.STAGE_ALL then
+			HUD.announce(`🎖 Rank up! Lv.{payload.rank} {payload.title}`, T.Gold)
 		end
 	end)
 
 	Net.on("Announce", function(payload)
+		if stage < Economy.STAGE_ALL then
+			return
+		end
 		if payload.kind == "RushStart" then
 			HUD.announce("🔥 SLEIGH RUSH! Load your sack for x2!", Color3.fromRGB(255, 160, 60))
 		elseif payload.kind == "SleighDeparted" then

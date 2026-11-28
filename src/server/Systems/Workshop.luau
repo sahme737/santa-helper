@@ -463,14 +463,25 @@ local function plotCFrame(index: number): CFrame
 	return PlotLayout.plotCFrame(index, Config.MAX_PLOTS)
 end
 
+-- A pad that has nothing to offer right now is hidden completely, so the
+-- plot never shows buttons the player cannot use yet.
 local function setPadLabel(plot: Model, padName: string, text: string?, enabled: boolean)
 	local pad = plot:FindFirstChild(padName)
 	if not pad or not pad:IsA("BasePart") then
 		return
 	end
-	pad.Transparency = if enabled then 0 else 0.85
+	pad.Transparency = if enabled then 0 else 1
+	pad.CanTouch = enabled
+	pad.CanCollide = enabled
 	pad:SetAttribute("Enabled", enabled)
 	local gui = pad:FindFirstChildOfClass("BillboardGui")
+	if gui then
+		gui.Enabled = enabled
+	end
+	local light = pad:FindFirstChildOfClass("PointLight")
+	if light then
+		light.Enabled = enabled
+	end
 	local label = gui and gui:FindFirstChildOfClass("TextLabel")
 	if label then
 		label.Text = text or ""
@@ -510,8 +521,9 @@ local function refreshPads(player: Player, profile: Profile)
 		return
 	end
 	local plot = plotModel(index)
+	local stage = Economy.stage(profile)
 	local _, machine = nextMachine(profile)
-	if machine then
+	if machine and stage >= Economy.STAGE_MACHINES then
 		setPadLabel(
 			plot,
 			"PadMachine",
@@ -519,10 +531,10 @@ local function refreshPads(player: Player, profile: Profile)
 			true
 		)
 	else
-		setPadLabel(plot, "PadMachine", "All machines built!", false)
+		setPadLabel(plot, "PadMachine", "", false)
 	end
 	local decor = nextDecor(profile)
-	if decor then
+	if decor and stage >= Economy.STAGE_FLY then
 		setPadLabel(
 			plot,
 			"PadDecor",
@@ -530,9 +542,9 @@ local function refreshPads(player: Player, profile: Profile)
 			true
 		)
 	else
-		setPadLabel(plot, "PadDecor", "Build more machines\nto unlock decorations", false)
+		setPadLabel(plot, "PadDecor", "", false)
 	end
-	if profile.elves < Config.ELVES.MAX then
+	if profile.elves < Config.ELVES.MAX and stage >= Economy.STAGE_ELVES then
 		setPadLabel(
 			plot,
 			"PadElf",
@@ -544,7 +556,14 @@ local function refreshPads(player: Player, profile: Profile)
 			true
 		)
 	else
-		setPadLabel(plot, "PadElf", "Elf team complete!", false)
+		setPadLabel(plot, "PadElf", "", false)
+	end
+	-- The sleigh only offers a flight once an elf keeps the workshop running.
+	local sleigh = plot:FindFirstChild("Sleigh")
+	local seat = sleigh and sleigh:IsA("Model") and sleigh.PrimaryPart
+	local flyPrompt = seat and seat:FindFirstChildOfClass("ProximityPrompt")
+	if flyPrompt then
+		flyPrompt.Enabled = stage >= Economy.STAGE_FLY
 	end
 end
 
@@ -892,6 +911,7 @@ function Workshop.loadSleigh(player: Player, auto: boolean): boolean
 	local plotIndex = playerPlot[player]
 	if plotIndex then
 		renderSack(plotIndex, profile)
+		refreshPads(player, profile)
 	end
 	Net.push(
 		player,
@@ -1119,7 +1139,7 @@ function Workshop.start()
 		end
 		return Workshop.buyDecor(player, id)
 	end)
-	Net.handle("Wrap", 5, 8, function(player)
+	Net.handle("Wrap", 1, 2, function(player)
 		return Workshop.wrap(player)
 	end)
 	Net.handle("HireElf", 3, 5, function(player)

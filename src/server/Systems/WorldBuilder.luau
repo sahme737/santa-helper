@@ -1331,14 +1331,6 @@ local function buildPlot(plots: Instance, index: number): Model
 		Parent = model,
 	})
 	Build.light(wrapGlow, WARM_LIGHT, 14, 1.5)
-	Build.billboard(
-		wrapGlow,
-		"🎀 Wrapping Station",
-		UDim2.fromScale(10, 2),
-		Vector3.new(0, 5, 0),
-		Color3.new(1, 1, 1),
-		70
-	)
 
 	-- Wrapping table: where the player (and the first elves) wrap presents.
 	local tableCF = PlotLayout.WRAP_TABLE
@@ -1543,6 +1535,7 @@ local function buildPlot(plots: Instance, index: number): Model
 	for i = 1, 2 do
 		local deer = ReindeerModel.build("Cocoa", false, 1.4)
 		deer:PivotTo(at(PlotLayout.SLEIGH * CFrame.new(-2.5 + (i - 1) * 5, 0.5, -13)))
+		CollectionService:AddTag(deer, "IdleDeer")
 		deer.Parent = model
 	end
 	local sleighSeat = sleigh.PrimaryPart :: BasePart

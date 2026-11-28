@@ -1,9 +1,8 @@
 --!strict
--- The guide: a short chain of jobs that teaches the whole game, one plain
--- sentence at a time. Each job has a glowing path from the player, a big
--- bouncing arrow over the place to go, and a pointer at the screen edge when
--- that place is out of view. Progress is saved so it never repeats; after the
--- chain, gentle reminders appear when there is something obvious to do.
+-- The guide: one short line at the top of the screen saying what to do next,
+-- with a golden path and a small arrow over the place to go. It never shouts
+-- and never stacks popups. Progress is saved so it never repeats; after the
+-- chain, a reminder appears only when there is something obvious to do.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -27,7 +26,7 @@ local player = Players.LocalPlayer
 
 -- Saved progress for this chain starts at SAVE_BASE, so helpers who finished
 -- the older, shorter guide are walked through the new one once.
-local SAVE_BASE = 10
+local SAVE_BASE = 20
 
 type Step = { resolve: (any) -> (string, Instance?), done: (any) -> boolean }
 
@@ -78,27 +77,24 @@ local function earnThenBuy(
 	end
 	local missing = cost - profile.coins
 	if profile.sack >= missing then
-		return `🛷 Step on the green LOAD pad to turn your presents into Cheer for {what}.`,
-			plotPart("LoadPad")
+		return "🛷 Step on the green pad to load your presents", plotPart("LoadPad")
 	end
-	return `🎁 Wrap more presents! You need {Format.short(missing)} more Cheer for {what}.`,
+	return `🎁 Pack more presents ({Format.short(missing)} more Cheer for {what})`,
 		plotPart("WrapTable")
 end
 
 local STEPS: { Step } = {
 	{
 		resolve = function()
-			return "🎁 Walk to the WRAPPING TABLE. Then hold the big red WRAP button to wrap presents!",
-				plotPart("WrapTable")
+			return "🎁 Pack a present at your wrapping table", plotPart("WrapTable")
 		end,
 		done = function(s)
-			return s.profile.lifetimeCoins > 0 or s.profile.sack >= Config.WRAP.MIN_VALUE * 5
+			return s.profile.lifetimeCoins > 0 or s.profile.sack >= Config.WRAP.MIN_VALUE * 2
 		end,
 	},
 	{
 		resolve = function()
-			return "🛷 Great wrapping! Now step on the green LOAD pad. Your presents turn into Cheer (coins)!",
-				plotPart("LoadPad")
+			return "🛷 Step on the green pad to load your sleigh", plotPart("LoadPad")
 		end,
 		done = function(s)
 			return s.profile.lifetimeCoins > 0
@@ -112,8 +108,8 @@ local STEPS: { Step } = {
 				s,
 				cost,
 				"PadMachine",
-				"🔨 You have enough Cheer! Step on the yellow pad to build a new toy machine.",
-				"a new toy machine"
+				"🔨 Step on the yellow pad to build a toy machine",
+				"a toy machine"
 			)
 		end,
 		done = function(s)
@@ -126,8 +122,8 @@ local STEPS: { Step } = {
 				s,
 				Economy.elfCost(0),
 				"PadElf",
-				"🧝 Step on the yellow pad to hire an elf. Elves wrap presents for you!",
-				"your first elf"
+				"🧝 Step on the yellow pad to hire an elf",
+				"an elf helper"
 			)
 		end,
 		done = function(s)
@@ -136,23 +132,23 @@ local STEPS: { Step } = {
 	},
 	{
 		resolve = function()
-			local hub = Workspace:FindFirstChild("World")
-			local stable = hub and hub:FindFirstChild("ReindeerStable", true)
-			return "🦌 Your elf is wrapping for you now! Follow the arrow to the Reindeer Stable and hatch a pet reindeer.",
-				stable and stable:FindFirstChild("Egg_Snowdrift")
-		end,
-		done = function(s)
-			return #s.profile.pets >= 1
-		end,
-	},
-	{
-		resolve = function()
 			local sleigh = plotPart("Sleigh")
-			return "🛷 Time to deliver! Walk to your sleigh and press Fly Delivery to drop presents down chimneys.",
+			return "🛷 Hop in your sleigh and fly a delivery",
 				sleigh and (sleigh :: Model).PrimaryPart
 		end,
 		done = function(s)
 			return s.profile.delivered >= 1
+		end,
+	},
+	{
+		resolve = function()
+			local hub = Workspace:FindFirstChild("World")
+			local stable = hub and hub:FindFirstChild("ReindeerStable", true)
+			return "🦌 Hatch a pet at the Reindeer Stable",
+				stable and stable:FindFirstChild("Egg_Snowdrift")
+		end,
+		done = function(s)
+			return #s.profile.pets >= 1
 		end,
 	},
 }
@@ -161,28 +157,22 @@ local STEPS: { Step } = {
 local function reminder(s: any): (string?, Instance?)
 	local profile = s.profile
 	if profile.sack >= Economy.sackCapacity(profile.sackLevel) then
-		return "🛷 Your sack is full! Step on the green LOAD pad.", plotPart("LoadPad")
+		return "🛷 Sack full! Step on the green pad", plotPart("LoadPad")
 	end
 	if profile.elves < 1 then
 		return earnThenBuy(
 			s,
 			Economy.elfCost(0),
 			"PadElf",
-			"🧝 Step on the yellow pad to hire an elf. Elves wrap presents for you!",
-			"your first elf"
+			"🧝 Step on the yellow pad to hire an elf",
+			"an elf helper"
 		)
-	end
-	local machine = nextMachine(profile)
-	if machine and profile.coins >= machine.cost then
-		return `🔨 You can build the {machine.name}! Step on the yellow pad.`,
-			plotPart("PadMachine")
 	end
 	return nil, nil
 end
 
 local screen: ScreenGui
 local banner: Frame
-local bannerHeader: TextLabel
 local bannerText: TextLabel
 local pointer: TextLabel
 local beam: Beam? = nil
@@ -227,7 +217,7 @@ local function guideTo(target: Instance?)
 		return
 	end
 	currentTarget = target
-	arrowHeight = target.Size.Y / 2 + 9
+	arrowHeight = target.Size.Y / 2 + 7
 	a0 = UI.make("Attachment", { Name = "GuideFrom", Parent = root })
 	a1 = UI.make(
 		"Attachment",
@@ -238,51 +228,50 @@ local function guideTo(target: Instance?)
 		Attachment1 = a1,
 		Color = ColorSequence.new(T.Gold),
 		LightEmission = 1,
-		Width0 = 1.6,
-		Width1 = 1.6,
+		Width0 = 1,
+		Width1 = 1,
 		FaceCamera = true,
 		Texture = "rbxasset://textures/particles/sparkles_main.dds",
 		TextureMode = Enum.TextureMode.Static,
 		TextureLength = 3,
 		TextureSpeed = 2,
-		Transparency = NumberSequence.new(0.1),
+		Transparency = NumberSequence.new(0.35),
 		Parent = target,
 	})
 	highlight = UI.make("Highlight", {
 		Adornee = target,
 		FillColor = T.Gold,
-		FillTransparency = 0.5,
+		FillTransparency = 0.75,
 		OutlineColor = Color3.new(1, 1, 1),
 		Parent = target,
 	})
 	-- Big bouncing arrow that shows through walls.
 	local gui: BillboardGui = UI.make("BillboardGui", {
 		Name = "GuideArrow",
-		Size = UDim2.fromOffset(110, 110),
+		Size = UDim2.fromOffset(64, 64),
 		StudsOffsetWorldSpace = Vector3.new(0, arrowHeight, 0),
 		AlwaysOnTop = true,
 		LightInfluence = 0,
-		MaxDistance = 2000,
+		MaxDistance = 600,
 		Parent = target,
 	})
-	local label = UI.text({ Text = "⬇️", MaxTextSize = 110, Parent = gui })
+	local label = UI.text({ Text = "⬇️", MaxTextSize = 64, Parent = gui })
 	UI.textStroke(label, T.Ink, 2)
 	arrow = gui
 end
 
-local function show(header: string, text: string?, target: Instance?)
+local function show(text: string?, target: Instance?)
 	if not text then
 		banner.Visible = false
 		currentText = nil
 		clearGuide()
 		return
 	end
-	bannerHeader.Text = header
 	if text ~= currentText then
 		currentText = text
 		bannerText.Text = text
 		banner.Visible = true
-		UI.pop(banner, 1.08)
+		UI.pop(banner, 1.04)
 	end
 	if target ~= currentTarget then
 		task.defer(guideTo, target)
@@ -300,19 +289,10 @@ local function render(snapshot: any)
 	if advanced then
 		task.spawn(Net.request, "TutorialStep", SAVE_BASE + step)
 		if lastStep >= 0 then
-			UI.sound("Star", 0.5)
-			if STEPS[step + 1] then
-				Bus.fire("Toast", "✔ Well done! Next job...", "success")
-			else
-				Bus.fire("Confetti", 60)
-				Bus.fire("Announce", "🎄 You're a true Santa's Helper! 🎄", T.Gold)
-				task.delay(3, function()
-					Bus.fire(
-						"Toast",
-						"🎁 Come back every day for bigger gifts and Advent doors!",
-						"success"
-					)
-				end)
+			UI.sound("Star", 0.35)
+			if not STEPS[step + 1] then
+				Bus.fire("Confetti", 40)
+				Bus.fire("Announce", "🎄 You know the ropes now. Have fun!", T.Gold)
 			end
 		end
 	end
@@ -320,10 +300,10 @@ local function render(snapshot: any)
 	local info = STEPS[step + 1]
 	if info then
 		local text, target = info.resolve(snapshot)
-		show(`JOB {step + 1} OF {#STEPS}`, text, target)
+		show(text, target)
 	else
 		local text, target = reminder(snapshot)
-		show("WHAT TO DO NEXT", text, target)
+		show(text, target)
 	end
 end
 
@@ -337,7 +317,7 @@ local function animate()
 		pointer.Visible = false
 		return
 	end
-	local bounce = math.abs(math.sin(os.clock() * 4)) * 2.5
+	local bounce = math.abs(math.sin(os.clock() * 3)) * 1.5
 	gui.StudsOffsetWorldSpace = Vector3.new(0, arrowHeight + bounce, 0)
 	local camera = Workspace.CurrentCamera
 	if not camera or flying then
@@ -384,43 +364,33 @@ function Tutorial.init()
 	end)
 	banner = UI.make("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.fromScale(0.5, 0.17),
-		Size = UDim2.fromScale(0.5, 0.13),
-		BackgroundColor3 = Color3.fromRGB(150, 25, 40),
-		BackgroundTransparency = 0.05,
+		Position = UDim2.fromScale(0.5, 0.13),
+		Size = UDim2.fromScale(0.36, 0.06),
+		BackgroundColor3 = Color3.fromRGB(30, 22, 30),
+		BackgroundTransparency = 0.3,
 		Visible = false,
 		Parent = screen,
 	})
 	UI.make(
 		"UISizeConstraint",
-		{ MinSize = Vector2.new(300, 76), MaxSize = Vector2.new(760, 124), Parent = banner }
+		{ MinSize = Vector2.new(260, 36), MaxSize = Vector2.new(560, 52), Parent = banner }
 	)
-	UI.corner(banner, 16)
-	UI.stroke(banner, T.Gold, 3.5)
-	bannerHeader = UI.text({
-		Text = "",
-		Size = UDim2.fromScale(0.94, 0.22),
-		Position = UDim2.fromScale(0.03, 0.06),
-		TextColor3 = T.Gold,
-		MaxTextSize = 18,
-		Parent = banner,
-	})
-	UI.textStroke(bannerHeader, T.Ink, 1.5)
+	UI.corner(banner, 14)
+	UI.stroke(banner, T.Gold, 1.5)
 	bannerText = UI.text({
 		Text = "",
-		Size = UDim2.fromScale(0.94, 0.64),
-		Position = UDim2.fromScale(0.03, 0.3),
-		MaxTextSize = 28,
-		TextWrapped = true,
+		Size = UDim2.fromScale(0.94, 0.76),
+		Position = UDim2.fromScale(0.03, 0.12),
+		MaxTextSize = 22,
 		Parent = banner,
 	})
-	UI.textStroke(bannerText, T.Ink, 2)
+	UI.textStroke(bannerText, T.Ink, 1.5)
 	pointer = UI.text({
 		Name = "Pointer",
 		Text = "➡️",
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Size = UDim2.fromOffset(84, 84),
-		MaxTextSize = 84,
+		Size = UDim2.fromOffset(54, 54),
+		MaxTextSize = 54,
 		Visible = false,
 		Parent = screen,
 	})
