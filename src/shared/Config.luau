@@ -844,14 +844,14 @@ Config.GAME_PASSES = {
 	-- Playground passes: fun and convenience only, never an advantage.
 	{
 		key = "RidePass",
-		id = 0,
+		id = 2102071058,
 		name = "Playground Ride Pass",
 		description = "Unlimited free rides on the train and the carousel.",
 		robux = 59,
 	},
 	{
 		key = "GoldenSnowballs",
-		id = 0,
+		id = 2100182006,
 		name = "Golden Snowballs",
 		description = "Throw glittering golden snowballs. Just for show!",
 		robux = 39,
@@ -909,7 +909,7 @@ Config.DEV_PRODUCTS = {
 	},
 	{
 		key = "Fireworks",
-		id = 0,
+		id = 3737344586,
 		name = "Christmas Fireworks",
 		description = "Light up the sky over the plaza for everyone.",
 		robux = 15,
