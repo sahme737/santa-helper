@@ -102,14 +102,14 @@ local SHOTS: { Shot } = {
 		line = "Saddle up and spin",
 		color = Color3.fromRGB(210, 150, 255),
 		length = 4,
-		camera = orbit(PLAY.CAROUSEL.CENTER, 27, 9, 150, 120, 5),
+		camera = orbit(PLAY.CAROUSEL.CENTER, 24, 8, 215, 95, 5),
 	},
 	{
 		title = "⛸ ICE RINK",
 		line = "Slip, slide and skate with the elves",
 		color = Color3.fromRGB(130, 225, 245),
 		length = 4,
-		camera = orbit(PLAY.RINK.CENTER, 31, 11, 190, 100, 2),
+		camera = orbit(PLAY.RINK.CENTER, 29, 11, 275, 100, 2),
 	},
 	{
 		title = "🎁 SANTA'S WORKSHOP",

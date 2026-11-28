@@ -190,7 +190,7 @@ Config.PLAYGROUND = {
 	},
 	-- Everyone lands here, in front of a row of gates, one for each game.
 	LANDING = Vector3.new(0, 0.6, -105),
-	GATE_DISTANCE = 34,
+	GATE_DISTANCE = 40,
 	GATES = {
 		{ id = "Snowball", text = "❄️ Snowball Fight", color = Color3.fromRGB(70, 150, 220) },
 		{ id = "Train", text = "🚂 North Pole Express", color = Color3.fromRGB(35, 130, 75) },

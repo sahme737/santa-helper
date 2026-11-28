@@ -102,7 +102,7 @@ function Playground.start()
 		pad.Touched:Connect(function(hit)
 			local character = hit.Parent
 			local player = character and Players:GetPlayerFromCharacter(character)
-			if not player or hit.Name ~= "HumanoidRootPart" then
+			if not player then
 				return
 			end
 			local now = os.clock()

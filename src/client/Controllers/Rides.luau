@@ -447,7 +447,7 @@ local PLACES = {
 	{ id = "Rink", text = "⛸ Ice Rink\nFree", color = Color3.fromRGB(60, 170, 200) },
 	{
 		id = "Workshop",
-		text = "🎁 Santa's Workshop\nWrap and deliver presents",
+		text = "🎁 Santa's Workshop\nWrap presents",
 		color = Color3.fromRGB(200, 40, 50),
 	},
 	{ id = "Plaza", text = "🎄 Plaza\nBack to the gates", color = Color3.fromRGB(90, 90, 110) },

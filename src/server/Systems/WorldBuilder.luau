@@ -2230,7 +2230,7 @@ local function buildGates(hub: Instance)
 	local gates = folder("Gates", hub)
 	local count = #play.GATES
 	for i, gate in play.GATES do
-		local angle = math.rad((i - (count + 1) / 2) * 32)
+		local angle = math.rad((i - (count + 1) / 2) * 26)
 		local pos = landing + Vector3.new(math.sin(angle), 0, math.cos(angle)) * play.GATE_DISTANCE
 		-- -Z (the front of the sign) looks back at the landing.
 		local cf = CFrame.lookAt(pos, landing)
