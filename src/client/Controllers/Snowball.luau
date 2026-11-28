@@ -18,6 +18,7 @@ local ElfModel = require(Shared.Models.ElfModel)
 local Lib = script.Parent.Parent:WaitForChild("Lib")
 local UI = require(Lib.UI)
 local Net = require(Lib.Net)
+local State = require(Lib.State)
 local Bus = require(Lib.Bus)
 
 local Snowball = {}
@@ -29,6 +30,7 @@ local CENTER = ARENA.CENTER
 local ACTIVE_RANGE = 260 -- bots only move when the camera is this close
 local HIT_RADIUS = 2.7
 local SNOW = Color3.fromRGB(245, 250, 255)
+local GOLD = Color3.fromRGB(255, 205, 70)
 
 type Bot = {
 	model: Model,
@@ -147,9 +149,27 @@ end
 -- Snowballs
 --------------------------------------------------------------------------------
 
-local function launch(origin: Vector3, velocity: Vector3, owner: "me" | "bot" | "other", bot: Bot?)
-	local part = Build.ball(folder, CFrame.new(origin), 1.3, SNOW, Enum.Material.Snow)
+local function launch(
+	origin: Vector3,
+	velocity: Vector3,
+	owner: "me" | "bot" | "other",
+	bot: Bot?,
+	gold: boolean?
+)
+	local part = Build.ball(
+		folder,
+		CFrame.new(origin),
+		1.3,
+		if gold then GOLD else SNOW,
+		if gold then Enum.Material.Neon else Enum.Material.Snow
+	)
 	part.CastShadow = false
+	if gold then
+		-- Golden Snowballs pass: glitter only, it hits just the same.
+		local sparkles = Instance.new("Sparkles")
+		sparkles.SparkleColor = GOLD
+		sparkles.Parent = part
+	end
 	table.insert(
 		balls,
 		{ part = part, pos = origin, vel = velocity, owner = owner, bot = bot, life = 4 }
@@ -301,7 +321,8 @@ local function throwAt(screenPoint: Vector2)
 		origin += toward.Unit * 1.6
 	end
 	local velocity = lob(origin, aim, ARENA.SPEED)
-	launch(origin, velocity, "me", nil)
+	local data = State.data
+	launch(origin, velocity, "me", nil, data and data.passes.GoldenSnowballs == true)
 	UI.sound("Whoosh", 0.3, 1.3)
 	task.spawn(Net.request, "SnowballThrow", origin, velocity)
 end
@@ -509,7 +530,7 @@ function Snowball.start()
 	-- Another player's throw, shown here.
 	Net.on("Snowball", function(payload)
 		if typeof(payload.origin) == "Vector3" and typeof(payload.velocity) == "Vector3" then
-			launch(payload.origin, payload.velocity, "other", nil)
+			launch(payload.origin, payload.velocity, "other", nil, payload.gold == true)
 		end
 	end)
 	Net.on("Snowballed", function(payload)

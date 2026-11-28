@@ -128,6 +128,9 @@ function Playground.start()
 		if away.Magnitude > info.reach then
 			return false, "Come closer to the ride"
 		end
+		if PlayerState.hasPass(player, "RidePass") then
+			return true, 0
+		end
 		if not PlayerState.trySpend(player, profile, "coins", info.cost) then
 			return false, `A ticket costs {info.cost} Cheer. Earn some in Santa's Workshop!`
 		end

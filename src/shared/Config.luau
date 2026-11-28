@@ -841,6 +841,21 @@ Config.GAME_PASSES = {
 		description = "Golden Crown, gold name tag and +25% Snowflakes.",
 		robux = 129,
 	},
+	-- Playground passes: fun and convenience only, never an advantage.
+	{
+		key = "RidePass",
+		id = 0,
+		name = "Playground Ride Pass",
+		description = "Unlimited free rides on the train and the carousel.",
+		robux = 59,
+	},
+	{
+		key = "GoldenSnowballs",
+		id = 0,
+		name = "Golden Snowballs",
+		description = "Throw glittering golden snowballs. Just for show!",
+		robux = 39,
+	},
 } :: { PassDef }
 
 export type ProductDef = {
@@ -891,6 +906,14 @@ Config.DEV_PRODUCTS = {
 		description = "Exclusive reindeer, +400% Cheer",
 		robux = 149,
 		grant = { kind = "pet", amount = 1, id = "NorthernLights" },
+	},
+	{
+		key = "Fireworks",
+		id = 0,
+		name = "Christmas Fireworks",
+		description = "Light up the sky over the plaza for everyone.",
+		robux = 15,
+		grant = { kind = "fireworks", amount = 1 },
 	},
 } :: { ProductDef }
 

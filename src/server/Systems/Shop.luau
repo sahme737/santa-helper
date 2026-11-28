@@ -156,6 +156,8 @@ local function grantProduct(player: Player, profile: Profile, product: Config.Pr
 			-- Stable full: grant equivalent snowflakes so the purchase is never lost.
 			PlayerState.addSnowflakes(player, profile, 800, false)
 		end
+	elseif grant.kind == "fireworks" then
+		Net.pushAll("Fireworks", { by = player.DisplayName })
 	end
 	PlayerState.dirty(player)
 end
@@ -275,6 +277,8 @@ function Shop.start()
 					PlayerState.setPass(player, key)
 				end
 			end
+		elseif command == "fireworks" then
+			Net.pushAll("Fireworks", { by = player.DisplayName })
 		elseif command == "reset" then
 			profile.daily.lastDay = 0
 			profile.advent = {}

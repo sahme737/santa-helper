@@ -21,6 +21,8 @@ local PASS_ICONS = {
 	LuckyHooves = "🍀",
 	ExtraStall = "🦌",
 	VIP = "👑",
+	RidePass = "🎟",
+	GoldenSnowballs = "✨",
 }
 local PRODUCT_ICONS = {
 	Snowflakes100 = "❄",
@@ -28,6 +30,7 @@ local PRODUCT_ICONS = {
 	Snowflakes1500 = "❄",
 	CocoaBoost = "☕",
 	NorthernLights = "🌌",
+	Fireworks = "🎆",
 }
 
 function StorePanel.build(screen: ScreenGui)

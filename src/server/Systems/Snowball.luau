@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 
 local Net = require(script.Parent.Parent.Lib.Net)
+local PlayerState = require(script.Parent.PlayerState)
 
 local Snowball = {}
 
@@ -52,12 +53,13 @@ function Snowball.start()
 		if (origin - root.Position).Magnitude > 12 or velocity.Magnitude > ARENA.SPEED * 1.6 then
 			return false, nil
 		end
+		local gold = PlayerState.hasPass(player, "GoldenSnowballs")
 		for _, other in Players:GetPlayers() do
 			if other ~= player and inArena(other, 120) then
 				Net.push(
 					other,
 					"Snowball",
-					{ from = player.UserId, origin = origin, velocity = velocity }
+					{ from = player.UserId, origin = origin, velocity = velocity, gold = gold }
 				)
 			end
 		end

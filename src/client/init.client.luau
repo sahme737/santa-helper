@@ -19,6 +19,7 @@ local ORDER = {
 	"PetFollow",
 	"Snowfall",
 	"Prompts",
+	"Fireworks",
 	"Trailer",
 }
 

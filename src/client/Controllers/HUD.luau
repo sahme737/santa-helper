@@ -385,8 +385,9 @@ local function build()
 			Bus.fire("StartDelivery")
 		end)
 	)
+	-- The store sells playground extras too, so it is there from the start.
 	add(
-		Economy.STAGE_ALL,
+		0,
 		menuButton(menu, 6, "💎", "Store", Color3.fromRGB(230, 160, 30), function()
 			Bus.fire("OpenMenu", "Store")
 		end)
