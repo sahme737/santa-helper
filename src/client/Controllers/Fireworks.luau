@@ -79,7 +79,7 @@ local function show()
 		local angle = math.random() * math.pi * 2
 		local radius = 20 + math.random() * 75
 		local at =
-			Vector3.new(math.cos(angle) * radius, 75 + math.random() * 45, math.sin(angle) * radius)
+			Vector3.new(math.cos(angle) * radius, 42 + math.random() * 36, math.sin(angle) * radius)
 		burst(at, COLORS[math.random(1, #COLORS)])
 		task.wait(0.3 + math.random() * 0.5)
 	end

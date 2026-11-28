@@ -178,7 +178,7 @@ local function build()
 		ZIndex = 5,
 		Parent = screen,
 	})
-	UI.button({
+	local skip = UI.button({
 		Name = "Skip",
 		Text = "Skip ⏭",
 		Color = Color3.fromRGB(60, 60, 75),
@@ -186,12 +186,13 @@ local function build()
 		Position = UDim2.new(1, -16, 0.115, 0),
 		Size = UDim2.fromOffset(120, 44),
 		MaxTextSize = 24,
-		ZIndex = 6,
 		Parent = screen,
 		OnClick = function()
 			playing = false
 		end,
 	})
+	-- Above the white flash, which covers the whole screen on every cut.
+	skip.ZIndex = 10
 end
 
 local function cut(shot: Shot)
