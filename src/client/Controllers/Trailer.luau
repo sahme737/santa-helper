@@ -182,8 +182,9 @@ local function build()
 		Name = "Skip",
 		Text = "Skip ⏭",
 		Color = Color3.fromRGB(60, 60, 75),
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -16, 0.115, 0),
+		-- Bottom right: the Roblox top bar swallows clicks near the top edge.
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -16, 0.885, 0),
 		Size = UDim2.fromOffset(120, 44),
 		MaxTextSize = 24,
 		Parent = screen,
