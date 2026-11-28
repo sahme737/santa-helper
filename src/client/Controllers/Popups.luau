@@ -9,7 +9,6 @@ local Lib = script.Parent.Parent:WaitForChild("Lib")
 local UI = require(Lib.UI)
 local Net = require(Lib.Net)
 local Bus = require(Lib.Bus)
-local State = require(Lib.State)
 
 local Popups = {}
 
@@ -91,23 +90,6 @@ function Popups.start()
 	Bus.on("Confetti", function(amount: number?)
 		Popups.confetti(amount)
 	end)
-	-- Brand new helpers get the whole game in four short lines.
-	local welcomed = false
-	State.onChanged(function(snapshot)
-		if welcomed then
-			return
-		end
-		welcomed = true
-		local profile = snapshot.profile
-		if profile.lifetimeCoins <= 0 and profile.delivered <= 0 then
-			modal(
-				"Welcome, Santa's Helper! 🎅",
-				"1. 🎁 Wrap presents at your table\n2. 🛷 Load them on the sleigh for Cheer\n3. 🧝 Hire elves to wrap for you\n4. 🦌 Fly out and deliver to the town!\n\nJust follow the golden arrow.",
-				"Let's go!",
-				T.Red
-			)
-		end
-	end)
 	Net.on("Offline", function(payload)
 		modal(
 			"Welcome back! 🎄",
@@ -131,13 +113,7 @@ function Popups.start()
 		elseif payload.kind == "Loaded" and not payload.auto then
 			Popups.confetti(14)
 		elseif payload.kind == "RankUp" then
-			Popups.confetti(50)
-			modal(
-				"🎖 Rank Up!",
-				`You are now Lv.{payload.rank}\n{payload.title}\n\n+2% Cheer forever · +{payload.snowflakes} ❄`,
-				"Let's go!",
-				T.Gold
-			)
+			Popups.confetti(30)
 		end
 	end)
 end

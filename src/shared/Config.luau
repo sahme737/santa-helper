@@ -1,11 +1,11 @@
 --!strict
--- Santa's Little Helper: every tunable gameplay number lives here.
+-- Christmas Playground: every tunable gameplay number lives here.
 -- NOTE: this module replicates to clients. Nothing secret belongs here, and the
 -- server never trusts a client-reported value derived from this file.
 
 local Config = {}
 
-Config.GAME_NAME = "Santa's Little Helper"
+Config.GAME_NAME = "Christmas Playground"
 Config.DATASTORE_NAME = "SantasHelper_Profiles_v1"
 Config.LEADERBOARD_DELIVERED = "SantasHelper_Delivered_2026"
 Config.LEADERBOARD_CHEER = "SantasHelper_Cheer_2026"
@@ -145,10 +145,61 @@ Config.ELVES = {
 
 -- Wrapping presents by hand at the wrapping table. Elves do it for you.
 Config.WRAP = {
-	COOLDOWN = 0.25, -- seconds between wraps the server accepts
-	INCOME_SECONDS = 0.6, -- one wrap is worth this many seconds of production
-	MIN_VALUE = 6,
+	COOLDOWN = 1.5, -- seconds between wraps the server accepts
+	INCOME_SECONDS = 6, -- one wrap is worth this many seconds of production
+	MIN_VALUE = 25,
 	REACH = 20, -- studs from the table
+}
+
+-- The snowball fight arena beside the plaza. Free for everyone from the
+-- first minute; nothing is earned there, it is just for fun.
+Config.SNOWBALL = {
+	-- Y is the arena floor, just above the slate path that runs under it.
+	CENTER = Vector3.new(0, 0.62, 182),
+	RADIUS = 32,
+	COOLDOWN = 0.4, -- seconds between throws
+	SPEED = 95, -- studs per second for a player's throw
+	BOT_SPEED = 58,
+	GRAVITY = 60,
+	BOTS = 5,
+}
+
+-- Christmas Playground attractions around the plaza. Rides cost a little
+-- Cheer; the rink and the snowball arena are free.
+Config.PLAYGROUND = {
+	TRAIN = {
+		RADIUS = 136, -- track circle round the plaza
+		SPEED = 22, -- studs per second
+		COST = 25,
+		CARS = 4,
+		CAR_SPACING = 12,
+		STATION_ANGLE = 285, -- degrees round the plaza
+	},
+	CAROUSEL = {
+		CENTER = Vector3.new(161, 0, -93),
+		RADIUS = 11,
+		SPIN = 0.55, -- radians per second
+		COST = 10,
+		SEATS = 8,
+		DURATION = 30,
+	},
+	RINK = {
+		CENTER = Vector3.new(161, 0, 93),
+		RADIUS = 24,
+		ICE_Y = 0.62, -- top of the ice, just above the slate path under it
+	},
+	-- Everyone lands here, in front of a row of gates, one for each game.
+	LANDING = Vector3.new(0, 0.6, -105),
+	GATE_DISTANCE = 40,
+	GATES = {
+		{ id = "Snowball", text = "❄️ Snowball Fight", color = Color3.fromRGB(70, 150, 220) },
+		{ id = "Train", text = "🚂 North Pole Express", color = Color3.fromRGB(35, 130, 75) },
+		{ id = "Workshop", text = "🎁 Santa's Workshop", color = Color3.fromRGB(200, 40, 50) },
+		{ id = "Carousel", text = "🎠 Reindeer Carousel", color = Color3.fromRGB(150, 80, 200) },
+		{ id = "Rink", text = "⛸ Ice Rink", color = Color3.fromRGB(60, 170, 200) },
+	},
+	-- Cheer a brand-new player starts with, enough for a few rides.
+	STARTING_CHEER = 100,
 }
 
 Config.SACK = {
@@ -790,6 +841,21 @@ Config.GAME_PASSES = {
 		description = "Golden Crown, gold name tag and +25% Snowflakes.",
 		robux = 129,
 	},
+	-- Playground passes: fun and convenience only, never an advantage.
+	{
+		key = "RidePass",
+		id = 2102071058,
+		name = "Playground Ride Pass",
+		description = "Unlimited free rides on the train and the carousel.",
+		robux = 59,
+	},
+	{
+		key = "GoldenSnowballs",
+		id = 2100182006,
+		name = "Golden Snowballs",
+		description = "Throw glittering golden snowballs. Just for show!",
+		robux = 39,
+	},
 } :: { PassDef }
 
 export type ProductDef = {
@@ -841,6 +907,14 @@ Config.DEV_PRODUCTS = {
 		robux = 149,
 		grant = { kind = "pet", amount = 1, id = "NorthernLights" },
 	},
+	{
+		key = "Fireworks",
+		id = 3737344586,
+		name = "Christmas Fireworks",
+		description = "Light up the sky over the plaza for everyone.",
+		robux = 15,
+		grant = { kind = "fireworks", amount = 1 },
+	},
 } :: { ProductDef }
 
 Config.VIP_SNOWFLAKE_BONUS = 0.25
@@ -873,8 +947,30 @@ Config.SOUNDS = {
 
 -- Music playlists: each track plays in turn.
 Config.MUSIC = {
-	Workshop = { "rbxassetid://9046738456", "rbxassetid://1838667764", "rbxassetid://9046740461" },
-	Sleigh = { "rbxassetid://1842909673", "rbxassetid://9047876673" },
+	-- Shuffled round the village. All from the licensed APM library on the
+	-- Creator Store.
+	Workshop = {
+		"rbxassetid://9046738456",
+		"rbxassetid://1838667764",
+		"rbxassetid://9046740461",
+		"rbxassetid://1839945406", -- Jingle Bells
+		"rbxassetid://9046753811", -- Sleigh Ride
+		"rbxassetid://1841342574", -- Santa Claus is Coming
+		"rbxassetid://1839945368", -- Deck the Halls
+		"rbxassetid://1841238992", -- Let it Snow
+		"rbxassetid://9046741231", -- Wrapping Gifts
+		"rbxassetid://9046739318", -- Snowman Song
+		"rbxassetid://1835649208", -- Feliz Navidad
+		"rbxassetid://1838667168", -- We Wish You A Merry Christmas
+		"rbxassetid://9046757549", -- Winter Bells
+	},
+	Sleigh = {
+		"rbxassetid://1842909673",
+		"rbxassetid://9047876673",
+		"rbxassetid://1839286187", -- Jingle Bells Rock
+		"rbxassetid://1842988035", -- We Wish You A Merry Christmas (Rock)
+	},
+	Trailer = { "rbxassetid://9038460167" }, -- Christmas Frenzy
 	VOLUME = 0.22,
 }
 

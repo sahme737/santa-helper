@@ -406,7 +406,8 @@ local function buildHub(world: Instance)
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "HubSpawn"
 	spawn.Size = Vector3.new(12, 1, 12)
-	spawn.CFrame = CFrame.new(0, 0.6, -80)
+	-- Facing the gates and the giant tree behind them.
+	spawn.CFrame = CFrame.new(Config.PLAYGROUND.LANDING) * CFrame.Angles(0, math.pi, 0)
 	spawn.Anchored = true
 	spawn.Transparency = 1
 	spawn.CanCollide = false
@@ -1331,14 +1332,6 @@ local function buildPlot(plots: Instance, index: number): Model
 		Parent = model,
 	})
 	Build.light(wrapGlow, WARM_LIGHT, 14, 1.5)
-	Build.billboard(
-		wrapGlow,
-		"🎀 Wrapping Station",
-		UDim2.fromScale(10, 2),
-		Vector3.new(0, 5, 0),
-		Color3.new(1, 1, 1),
-		70
-	)
 
 	-- Wrapping table: where the player (and the first elves) wrap presents.
 	local tableCF = PlotLayout.WRAP_TABLE
@@ -1543,6 +1536,7 @@ local function buildPlot(plots: Instance, index: number): Model
 	for i = 1, 2 do
 		local deer = ReindeerModel.build("Cocoa", false, 1.4)
 		deer:PivotTo(at(PlotLayout.SLEIGH * CFrame.new(-2.5 + (i - 1) * 5, 0.5, -13)))
+		CollectionService:AddTag(deer, "IdleDeer")
 		deer.Parent = model
 	end
 	local sleighSeat = sleigh.PrimaryPart :: BasePart
@@ -1920,6 +1914,355 @@ end
 
 --------------------------------------------------------------------------------
 
+-- The snowball arena: a ring of snow walls with gaps to walk in, snow forts
+-- for cover and an arch facing the plaza. The fight itself (bots, throwing)
+-- runs in the client Snowball controller.
+local function buildSnowArena(hub: Instance)
+	local model = Instance.new("Model")
+	model.Name = "SnowArena"
+	local centre = Config.SNOWBALL.CENTER
+	local radius = Config.SNOWBALL.RADIUS
+	local base = CFrame.new(centre.X, 0, centre.Z)
+	Build.part({
+		Name = "ArenaFloor",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.5, radius * 2 + 4, radius * 2 + 4),
+		CFrame = base * CFrame.new(0, centre.Y - 0.25, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(215, 235, 255),
+		Material = Enum.Material.Snow,
+		Parent = model,
+	})
+	-- Wall ring with four gaps (towards the plaza, away from it, and each side).
+	local blocks = 28
+	for k = 0, blocks - 1 do
+		local a = k / blocks * math.pi * 2
+		local nearGap = false
+		for _, gap in { 0, 90, 180, 270 } do
+			local diff = math.abs((math.deg(a) - gap + 180) % 360 - 180)
+			if diff < 14 then
+				nearGap = true
+			end
+		end
+		if not nearGap then
+			local pos = Vector3.new(math.cos(a) * (radius + 1), 1.6, math.sin(a) * (radius + 1))
+			Build.part({
+				Name = "SnowWall",
+				Size = Vector3.new(8, 3.2 + (k % 3) * 0.5, 3),
+				CFrame = base * CFrame.new(pos) * CFrame.Angles(0, -a + math.rad(90), 0),
+				Color = SNOW,
+				Material = Enum.Material.Snow,
+				Parent = model,
+			})
+		end
+	end
+	-- Snow forts to hide behind.
+	for i, spot in
+		{
+			{ -14, -10, 20 },
+			{ 13, -12, -25 },
+			{ 0, 2, 90 },
+			{ -16, 12, -30 },
+			{ 15, 13, 35 },
+		}
+	do
+		local cf = base * CFrame.new(spot[1], 0, spot[2]) * CFrame.Angles(0, math.rad(spot[3]), 0)
+		Build.part({
+			Name = "SnowFort",
+			Size = Vector3.new(9, 4, 2.4),
+			CFrame = cf * CFrame.new(0, 2, 0),
+			Color = SNOW,
+			Material = Enum.Material.Snow,
+			Parent = model,
+		})
+		for _, side in { -1, 1 } do
+			Build.ball(
+				model,
+				cf * CFrame.new(side * 3, 4.4, 0),
+				1.6 + (i % 2) * 0.4,
+				SNOW,
+				Enum.Material.Snow
+			)
+		end
+	end
+	-- Entrance arch facing the plaza (the plaza is towards -Z from here).
+	local gate = base * CFrame.new(0, 0, -(radius + 2))
+	for _, side in { -1, 1 } do
+		candyPole(model, gate * CFrame.new(side * 9, 0.2, 0), 13, 1.4)
+		local lamp = Build.ball(
+			model,
+			gate * CFrame.new(side * 9, 14.2, 0),
+			2.2,
+			Color3.fromRGB(190, 230, 255),
+			Enum.Material.Neon
+		)
+		Build.light(lamp, Color3.fromRGB(190, 230, 255), 26, 1.4)
+	end
+	sign(
+		model,
+		gate * CFrame.new(0, 12, 0),
+		"❄ SNOWBALL FIGHT ❄",
+		17,
+		3.6,
+		Color3.fromRGB(50, 120, 210),
+		Color3.new(1, 1, 1)
+	)
+	-- Piles of ready-made snowballs by the gate.
+	for _, side in { -1, 1 } do
+		for k = 1, 5 do
+			Build.ball(
+				model,
+				gate
+					* CFrame.new(
+						side * 6 + (k % 3 - 1) * 0.9,
+						0.7 + (k % 2) * 0.7,
+						3 + (k % 2) * 0.8
+					),
+				1.3,
+				SNOW,
+				Enum.Material.Snow
+			)
+		end
+	end
+	model.Parent = hub
+end
+
+-- Christmas Playground: the track and station of the North Pole Express, the
+-- base of the reindeer carousel and the ice rink. The moving parts (train,
+-- carousel, skaters) are drawn by the client Rides controller.
+local function buildPlayground(hub: Instance)
+	local model = Instance.new("Model")
+	model.Name = "Playground"
+	local play = Config.PLAYGROUND
+
+	-- Track: sleepers and two rails round the plaza.
+	local radius = play.TRAIN.RADIUS
+	local ties = 150
+	for k = 0, ties - 1 do
+		local a = k / ties * math.pi * 2
+		local cf = CFrame.new(math.cos(a) * radius, 0.12, math.sin(a) * radius)
+			* CFrame.Angles(0, -a, 0)
+		Build.deco({
+			Name = "Sleeper",
+			Size = Vector3.new(8.4, 0.25, 1.4),
+			CFrame = cf,
+			Color = Color3.fromRGB(110, 75, 50),
+			Material = Enum.Material.Wood,
+			CastShadow = false,
+			Parent = model,
+		})
+	end
+	local segments = 72
+	for _, offset in { -3.2, 3.2 } do
+		local r = radius + offset
+		local length = 2 * math.pi * r / segments + 0.3
+		for k = 0, segments - 1 do
+			local a = (k + 0.5) / segments * math.pi * 2
+			Build.deco({
+				Name = "Rail",
+				Size = Vector3.new(0.5, 0.4, length),
+				CFrame = CFrame.new(math.cos(a) * r, 0.4, math.sin(a) * r)
+					* CFrame.Angles(0, -a, 0),
+				Color = Color3.fromRGB(150, 155, 165),
+				Material = Enum.Material.Metal,
+				CastShadow = false,
+				Parent = model,
+			})
+		end
+	end
+
+	-- Station: a platform just outside the track with a roof and a sign.
+	local station = hubCF(play.TRAIN.STATION_ANGLE, radius + 13)
+	local platform = Build.part({
+		Name = "TrainStation",
+		Size = Vector3.new(26, 1.2, 10),
+		CFrame = station * CFrame.new(0, 0.6, 0),
+		Color = Color3.fromRGB(165, 115, 75),
+		Material = Enum.Material.WoodPlanks,
+		Parent = model,
+	})
+	for _, x in { -14.5, 14.5 } do
+		Build.part({
+			Size = Vector3.new(3, 0.6, 10),
+			CFrame = station * CFrame.new(x, 0.3, 0),
+			Color = Color3.fromRGB(150, 100, 62),
+			Material = Enum.Material.WoodPlanks,
+			Parent = model,
+		})
+	end
+	for _, x in { -11, 11 } do
+		for _, z in { -4, 4 } do
+			candyPole(model, station * CFrame.new(x, 1.2, z), 10, 1)
+		end
+	end
+	Build.deco({
+		Size = Vector3.new(27, 0.8, 12),
+		CFrame = station * CFrame.new(0, 11.6, 0),
+		Color = RED,
+		Parent = model,
+	})
+	Build.deco({
+		Size = Vector3.new(27.6, 0.4, 12.6),
+		CFrame = station * CFrame.new(0, 12.2, 0),
+		Color = SNOW,
+		Material = Enum.Material.Snow,
+		Parent = model,
+	})
+	sign(
+		model,
+		station * CFrame.new(0, 9, -5.6),
+		`🚂 NORTH POLE EXPRESS · {play.TRAIN.COST} Cheer`,
+		22,
+		3,
+		Color3.fromRGB(35, 120, 70),
+		Color3.new(1, 1, 1)
+	)
+	local lantern =
+		Build.ball(model, station * CFrame.new(0, 10.4, 0), 1.6, WARM_LIGHT, Enum.Material.Neon)
+	Build.light(lantern, WARM_LIGHT, 30, 1.5)
+	prompt(platform, "Ride the train", `{play.TRAIN.COST} Cheer`, "TrainRide", 18)
+
+	-- Reindeer carousel base.
+	local carousel = play.CAROUSEL
+	local carouselBase = Build.part({
+		Name = "CarouselBase",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.8, carousel.RADIUS * 2 + 5, carousel.RADIUS * 2 + 5),
+		CFrame = CFrame.new(carousel.CENTER.X, 0.4, carousel.CENTER.Z)
+			* CFrame.Angles(0, 0, math.rad(90)),
+		Color = RED,
+		Parent = model,
+	})
+	local carouselPrompt =
+		prompt(carouselBase, "Ride the carousel", `{carousel.COST} Cheer`, "CarouselRide", 22)
+	carouselPrompt.KeyboardKeyCode = Enum.KeyCode.R
+	local toHub = -Vector3.new(carousel.CENTER.X, 0, carousel.CENTER.Z).Unit
+	local signAt = Vector3.new(carousel.CENTER.X, 0, carousel.CENTER.Z)
+		+ toHub * (carousel.RADIUS + 6)
+	for _, side in { -1, 1 } do
+		local right = toHub:Cross(Vector3.new(0, 1, 0)) * side * 7
+		candyPole(model, CFrame.new(signAt + right + Vector3.new(0, 0.2, 0)), 9, 1)
+	end
+	sign(
+		model,
+		CFrame.lookAt(signAt + Vector3.new(0, 9.5, 0), signAt + toHub + Vector3.new(0, 9.5, 0)),
+		`🎠 REINDEER CAROUSEL · {carousel.COST} Cheer`,
+		16,
+		2.6,
+		Color3.fromRGB(150, 70, 190),
+		Color3.new(1, 1, 1)
+	)
+
+	-- Ice rink: slippery ice inside a low snow rim.
+	local rink = play.RINK
+	local ice = Build.part({
+		Name = "IceRink",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.5, rink.RADIUS * 2, rink.RADIUS * 2),
+		CFrame = CFrame.new(rink.CENTER.X, rink.ICE_Y - 0.25, rink.CENTER.Z)
+			* CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(170, 220, 255),
+		Material = Enum.Material.Ice,
+		Parent = model,
+	})
+	ice.Reflectance = 0.15
+	ice.CustomPhysicalProperties = PhysicalProperties.new(0.9, 0.04, 0, 100, 1)
+	local rim = 26
+	for k = 0, rim - 1 do
+		local a = k / rim * math.pi * 2
+		if k % 6 ~= 0 then
+			Build.part({
+				Name = "RinkRim",
+				Size = Vector3.new(6.4, 1.4, 2),
+				CFrame = CFrame.new(
+					rink.CENTER.X + math.cos(a) * (rink.RADIUS + 1),
+					0.7,
+					rink.CENTER.Z + math.sin(a) * (rink.RADIUS + 1)
+				) * CFrame.Angles(0, -a + math.rad(90), 0),
+				Color = SNOW,
+				Material = Enum.Material.Snow,
+				Parent = model,
+			})
+		end
+	end
+	for k = 0, 3 do
+		local a = k / 4 * math.pi * 2 + math.rad(45)
+		local base = CFrame.new(
+			rink.CENTER.X + math.cos(a) * (rink.RADIUS + 3),
+			0.2,
+			rink.CENTER.Z + math.sin(a) * (rink.RADIUS + 3)
+		)
+		candyPole(model, base, 12, 1.2)
+		local lamp = Build.ball(
+			model,
+			base * CFrame.new(0, 13.2, 0),
+			2.2,
+			Color3.fromRGB(190, 230, 255),
+			Enum.Material.Neon
+		)
+		Build.light(lamp, Color3.fromRGB(190, 230, 255), 34, 1.4)
+	end
+	local rinkHub = -Vector3.new(rink.CENTER.X, 0, rink.CENTER.Z).Unit
+	local rinkSign = Vector3.new(rink.CENTER.X, 0, rink.CENTER.Z) + rinkHub * (rink.RADIUS + 5)
+	for _, side in { -1, 1 } do
+		local right = rinkHub:Cross(Vector3.new(0, 1, 0)) * side * 6
+		candyPole(model, CFrame.new(rinkSign + right + Vector3.new(0, 0.2, 0)), 10, 1)
+	end
+	sign(
+		model,
+		CFrame.lookAt(
+			rinkSign + Vector3.new(0, 10.5, 0),
+			rinkSign + rinkHub + Vector3.new(0, 10.5, 0)
+		),
+		"⛸ ICE RINK",
+		12,
+		2.6,
+		Color3.fromRGB(50, 120, 210),
+		Color3.new(1, 1, 1)
+	)
+	model.Parent = hub
+end
+
+-- The landing: a fan of gates in front of the spawn, one for each game.
+-- Walking through a gate takes the player there (see Systems/Playground).
+local function buildGates(hub: Instance)
+	local play = Config.PLAYGROUND
+	local landing = Vector3.new(play.LANDING.X, 0.5, play.LANDING.Z)
+	local gates = folder("Gates", hub)
+	local count = #play.GATES
+	for i, gate in play.GATES do
+		local angle = math.rad((i - (count + 1) / 2) * 26)
+		local pos = landing + Vector3.new(math.sin(angle), 0, math.cos(angle)) * play.GATE_DISTANCE
+		-- -Z (the front of the sign) looks back at the landing.
+		local cf = CFrame.lookAt(pos, landing)
+		candyPole(gates, cf * CFrame.new(-6.5, 0, 0), 11, 1.4)
+		candyPole(gates, cf * CFrame.new(6.5, 0, 0), 11, 1.4)
+		sign(gates, cf * CFrame.new(0, 13, 0), gate.text, 15, 4, gate.color, Color3.new(1, 1, 1))
+		local pad = Build.part({
+			Name = "Gate_" .. gate.id,
+			Size = Vector3.new(11, 0.3, 5),
+			CFrame = cf * CFrame.new(0, 0.15, 0),
+			Color = gate.color,
+			Material = Enum.Material.Neon,
+			CanCollide = false,
+			CanTouch = true,
+			Parent = gates,
+		})
+		pad.Transparency = 0.25
+		pad:SetAttribute("Place", gate.id)
+		Build.light(pad, gate.color, 14, 1.2)
+	end
+	local middle = landing + Vector3.new(0, 0, play.GATE_DISTANCE)
+	sign(
+		gates,
+		CFrame.lookAt(middle + Vector3.new(0, 20.5, 0), landing + Vector3.new(0, 20.5, 0)),
+		"🎄 CHRISTMAS PLAYGROUND 🎄\nWalk through a gate to play",
+		34,
+		7,
+		Color3.fromRGB(30, 90, 50),
+		Color3.fromRGB(255, 225, 120)
+	)
+end
+
 function WorldBuilder.init()
 	buildLighting()
 	local world = Instance.new("Folder")
@@ -1933,6 +2276,9 @@ function WorldBuilder.init()
 	buildLeaderboards(hub)
 	buildRunway(hub)
 	buildEventSign(hub)
+	buildSnowArena(hub)
+	buildPlayground(hub)
+	buildGates(hub)
 
 	local plots = folder("Plots", workspace)
 	for i = 1, Config.MAX_PLOTS do

@@ -1,5 +1,5 @@
 --!strict
--- Santa's Little Helper client entry point. Controllers only render state and
+-- Christmas Playground client entry point. Controllers only render state and
 -- request actions; the server decides every outcome.
 
 local Controllers = script:WaitForChild("Controllers")
@@ -13,9 +13,14 @@ local ORDER = {
 	"WrapStation",
 	"SleighFlight",
 	"WorkshopFX",
+	"WorldLife",
+	"Snowball",
+	"Rides",
 	"PetFollow",
 	"Snowfall",
 	"Prompts",
+	"Fireworks",
+	"Trailer",
 }
 
 local loaded: { any } = {}
@@ -44,4 +49,4 @@ for _, controller in loaded do
 	end
 end
 
-print("[Santa's Little Helper] client started 🎄")
+print("[Christmas Playground] client started 🎄")

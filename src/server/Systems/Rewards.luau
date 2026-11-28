@@ -116,7 +116,7 @@ function Rewards.start()
 		return Rewards.claimPlaytime(player, i)
 	end)
 	Net.handle("TutorialStep", 2, 4, function(player, step: unknown)
-		local s = Guard.int(step, 0, 20)
+		local s = Guard.int(step, 0, 40)
 		local profile = PlayerData.get(player)
 		if not s or not profile then
 			return false, nil

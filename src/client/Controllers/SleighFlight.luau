@@ -198,27 +198,112 @@ local function burst(at: Vector3, color: Color3, amount: number)
 	end)
 end
 
+-- Soft cloud where something lands: chimney smoke on a hit, snow on a miss.
+local function puff(at: Vector3, color: Color3)
+	local holder = Build.deco({
+		Size = Vector3.new(1, 1, 1),
+		CFrame = CFrame.new(at),
+		Transparency = 1,
+		Parent = workspace,
+	})
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	smoke.Color = ColorSequence.new(color)
+	smoke.Transparency = NumberSequence.new(0.35, 1)
+	smoke.Size = NumberSequence.new(2.5, 7)
+	smoke.Lifetime = NumberRange.new(0.6, 1.2)
+	smoke.Speed = NumberRange.new(4, 10)
+	smoke.SpreadAngle = Vector2.new(70, 70)
+	smoke.Acceleration = Vector3.new(0, 6, 0)
+	smoke.Rate = 0
+	smoke.Parent = holder
+	smoke:Emit(14)
+	task.delay(1.6, function()
+		holder:Destroy()
+	end)
+end
+
+-- A big emoji that swells and floats up from where a present landed.
+local function landingBadge(at: Vector3, text: string)
+	local holder = Build.deco({
+		Size = Vector3.new(1, 1, 1),
+		CFrame = CFrame.new(at),
+		Transparency = 1,
+		Parent = workspace,
+	})
+	local gui: BillboardGui = UI.make("BillboardGui", {
+		Size = UDim2.fromScale(5, 5),
+		StudsOffsetWorldSpace = Vector3.new(0, 4, 0),
+		AlwaysOnTop = true,
+		LightInfluence = 0,
+		MaxDistance = 1200,
+		Parent = holder,
+	})
+	local label = UI.text({ Text = text, MaxTextSize = 100, Parent = gui })
+	local info = TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	UI.tween(gui, info, {
+		Size = UDim2.fromScale(16, 16),
+		StudsOffsetWorldSpace = Vector3.new(0, 22, 0),
+	})
+	UI.tween(
+		label,
+		TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+		{ TextTransparency = 1 }
+	)
+	task.delay(1, function()
+		holder:Destroy()
+	end)
+end
+
+-- The present tumbles down with a sparkle trail. A hit pops the chimney with
+-- smoke, sparkles and a floating gift; a miss just puffs up some snow.
 local function dropVisual(from: Vector3, to: Vector3, hitColor: Color3?)
-	local present = ToyModels.present(2.2, math.random(1, 5))
+	local present = ToyModels.present(3, math.random(1, 5))
 	local root = present.PrimaryPart :: BasePart
 	Build.weldModel(present, root)
 	for _, d in present:GetDescendants() do
 		if d:IsA("BasePart") and d ~= root then
 			d.Anchored = false
+			d.Massless = true
 		end
 	end
 	root.Anchored = true
 	present:PivotTo(CFrame.new(from))
 	present.Parent = workspace
-	local fall = math.max(0.35, (from.Y - to.Y) / 90)
-	UI.tween(root, TweenInfo.new(fall, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-		CFrame = CFrame.new(to) * CFrame.Angles(math.rad(180), math.rad(90), 0),
-	})
-	task.delay(fall, function()
-		if hitColor then
-			burst(to, hitColor, 40)
+	local trail = Instance.new("ParticleEmitter")
+	trail.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	trail.Color = ColorSequence.new(GOLD_COLOR, Color3.new(1, 1, 1))
+	trail.LightEmission = 1
+	trail.Size = NumberSequence.new(1.6, 0)
+	trail.Lifetime = NumberRange.new(0.4, 0.8)
+	trail.Speed = NumberRange.new(1, 4)
+	trail.SpreadAngle = Vector2.new(180, 180)
+	trail.Rate = 45
+	trail.Parent = root
+	local fall = math.max(0.45, (from.Y - to.Y) / 80)
+	local spin = Vector3.new(4 + math.random() * 4, 3 + math.random() * 3, math.random() * 4)
+	task.spawn(function()
+		local t = 0
+		while t < fall and root.Parent do
+			t += RunService.Heartbeat:Wait()
+			local a = math.min(1, t / fall)
+			local flat = from:Lerp(to, a)
+			local y = from.Y + (to.Y - from.Y) * a * a
+			root.CFrame = CFrame.new(flat.X, y, flat.Z)
+				* CFrame.Angles(a * spin.X, a * spin.Y, a * spin.Z)
 		end
 		present:Destroy()
+		if hitColor == COAL_COLOR then
+			burst(to, hitColor, 30)
+			puff(to, Color3.fromRGB(60, 60, 65))
+			landingBadge(to, "💨")
+		elseif hitColor then
+			burst(to, hitColor, 60)
+			puff(to, Color3.fromRGB(245, 245, 250))
+			landingBadge(to, if hitColor == GOLD_COLOR then "🌟" else "🎁")
+		else
+			puff(to, Color3.fromRGB(255, 255, 255))
+		end
 	end)
 end
 

@@ -170,6 +170,35 @@ function Economy.autoIncome(profile: Profile, ctx: Context): number
 	return Economy.incomePerSecond(profile, ctx)
 end
 
+-- How much of the game a helper has opened up. New helpers start with only
+-- the wrapping table and the LOAD pad; everything else appears when it
+-- becomes useful, so nobody is offered things they cannot afford or use yet.
+--   0 wrap and load      1 build machines     2 hire elves
+--   3 fly deliveries     4 everything
+Economy.STAGE_MACHINES = 1
+Economy.STAGE_ELVES = 2
+Economy.STAGE_FLY = 3
+Economy.STAGE_ALL = 4
+function Economy.stage(profile: Profile): number
+	if profile.delivered >= 1 or profile.rebirths >= 1 or #profile.pets >= 1 then
+		return 4
+	end
+	if profile.elves >= 1 then
+		return 3
+	end
+	local machines = 0
+	for _ in profile.machines do
+		machines += 1
+	end
+	if machines >= 2 then
+		return 2
+	end
+	if profile.lifetimeCoins > 0 then
+		return 1
+	end
+	return 0
+end
+
 -- Value of one present the player wraps by hand.
 function Economy.wrapValue(profile: Profile, ctx: Context): number
 	local income = Economy.incomePerSecond(profile, ctx)

@@ -1,9 +1,8 @@
 --!strict
--- The guide: a short chain of jobs that teaches the whole game, one plain
--- sentence at a time. Each job has a glowing path from the player, a big
--- bouncing arrow over the place to go, and a pointer at the screen edge when
--- that place is out of view. Progress is saved so it never repeats; after the
--- chain, gentle reminders appear when there is something obvious to do.
+-- Workshop hints: one short line at the top of the screen saying what to do
+-- next, shown only while the player is at their workshop, with a soft glow
+-- on the thing to use. No arrows, no trails, no popups. Progress is saved so it never repeats; after the
+-- chain, a reminder appears only when there is something obvious to do.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -16,6 +15,7 @@ local Format = require(Shared.Util.Format)
 
 local Lib = script.Parent.Parent:WaitForChild("Lib")
 local UI = require(Lib.UI)
+local Where = require(Lib.Where)
 local Net = require(Lib.Net)
 local State = require(Lib.State)
 local Bus = require(Lib.Bus)
@@ -27,7 +27,7 @@ local player = Players.LocalPlayer
 
 -- Saved progress for this chain starts at SAVE_BASE, so helpers who finished
 -- the older, shorter guide are walked through the new one once.
-local SAVE_BASE = 10
+local SAVE_BASE = 20
 
 type Step = { resolve: (any) -> (string, Instance?), done: (any) -> boolean }
 
@@ -78,27 +78,24 @@ local function earnThenBuy(
 	end
 	local missing = cost - profile.coins
 	if profile.sack >= missing then
-		return `🛷 Step on the green LOAD pad to turn your presents into Cheer for {what}.`,
-			plotPart("LoadPad")
+		return "🛷 Step on the green pad to load your presents", plotPart("LoadPad")
 	end
-	return `🎁 Wrap more presents! You need {Format.short(missing)} more Cheer for {what}.`,
+	return `🎁 Pack more presents ({Format.short(missing)} more Cheer for {what})`,
 		plotPart("WrapTable")
 end
 
 local STEPS: { Step } = {
 	{
 		resolve = function()
-			return "🎁 Walk to the WRAPPING TABLE. Then hold the big red WRAP button to wrap presents!",
-				plotPart("WrapTable")
+			return "🎁 Pack a present at your wrapping table", plotPart("WrapTable")
 		end,
 		done = function(s)
-			return s.profile.lifetimeCoins > 0 or s.profile.sack >= Config.WRAP.MIN_VALUE * 5
+			return s.profile.lifetimeCoins > 0 or s.profile.sack >= Config.WRAP.MIN_VALUE * 2
 		end,
 	},
 	{
 		resolve = function()
-			return "🛷 Great wrapping! Now step on the green LOAD pad. Your presents turn into Cheer (coins)!",
-				plotPart("LoadPad")
+			return "🛷 Step on the green pad to load your sleigh", plotPart("LoadPad")
 		end,
 		done = function(s)
 			return s.profile.lifetimeCoins > 0
@@ -112,8 +109,8 @@ local STEPS: { Step } = {
 				s,
 				cost,
 				"PadMachine",
-				"🔨 You have enough Cheer! Step on the yellow pad to build a new toy machine.",
-				"a new toy machine"
+				"🔨 Step on the yellow pad to build a toy machine",
+				"a toy machine"
 			)
 		end,
 		done = function(s)
@@ -126,8 +123,8 @@ local STEPS: { Step } = {
 				s,
 				Economy.elfCost(0),
 				"PadElf",
-				"🧝 Step on the yellow pad to hire an elf. Elves wrap presents for you!",
-				"your first elf"
+				"🧝 Step on the yellow pad to hire an elf",
+				"an elf helper"
 			)
 		end,
 		done = function(s)
@@ -136,23 +133,23 @@ local STEPS: { Step } = {
 	},
 	{
 		resolve = function()
-			local hub = Workspace:FindFirstChild("World")
-			local stable = hub and hub:FindFirstChild("ReindeerStable", true)
-			return "🦌 Your elf is wrapping for you now! Follow the arrow to the Reindeer Stable and hatch a pet reindeer.",
-				stable and stable:FindFirstChild("Egg_Snowdrift")
-		end,
-		done = function(s)
-			return #s.profile.pets >= 1
-		end,
-	},
-	{
-		resolve = function()
 			local sleigh = plotPart("Sleigh")
-			return "🛷 Time to deliver! Walk to your sleigh and press Fly Delivery to drop presents down chimneys.",
+			return "🛷 Hop in your sleigh and fly a delivery",
 				sleigh and (sleigh :: Model).PrimaryPart
 		end,
 		done = function(s)
 			return s.profile.delivered >= 1
+		end,
+	},
+	{
+		resolve = function()
+			local hub = Workspace:FindFirstChild("World")
+			local stable = hub and hub:FindFirstChild("ReindeerStable", true)
+			return "🦌 Hatch a pet at the Reindeer Stable",
+				stable and stable:FindFirstChild("Egg_Snowdrift")
+		end,
+		done = function(s)
+			return #s.profile.pets >= 1
 		end,
 	},
 }
@@ -161,128 +158,67 @@ local STEPS: { Step } = {
 local function reminder(s: any): (string?, Instance?)
 	local profile = s.profile
 	if profile.sack >= Economy.sackCapacity(profile.sackLevel) then
-		return "🛷 Your sack is full! Step on the green LOAD pad.", plotPart("LoadPad")
+		return "🛷 Sack full! Step on the green pad", plotPart("LoadPad")
 	end
 	if profile.elves < 1 then
 		return earnThenBuy(
 			s,
 			Economy.elfCost(0),
 			"PadElf",
-			"🧝 Step on the yellow pad to hire an elf. Elves wrap presents for you!",
-			"your first elf"
+			"🧝 Step on the yellow pad to hire an elf",
+			"an elf helper"
 		)
-	end
-	local machine = nextMachine(profile)
-	if machine and profile.coins >= machine.cost then
-		return `🔨 You can build the {machine.name}! Step on the yellow pad.`,
-			plotPart("PadMachine")
 	end
 	return nil, nil
 end
 
 local screen: ScreenGui
 local banner: Frame
-local bannerHeader: TextLabel
 local bannerText: TextLabel
-local pointer: TextLabel
-local beam: Beam? = nil
 local highlight: Highlight? = nil
-local arrow: BillboardGui? = nil
-local a0: Attachment? = nil
-local a1: Attachment? = nil
 local currentTarget: Instance? = nil
 local currentText: string? = nil
 local lastStep = -1
-local arrowHeight = 8
 local flying = false
 
 local function clearGuide()
-	if beam then
-		beam:Destroy()
-	end
 	if highlight then
 		highlight:Destroy()
 	end
-	if arrow then
-		arrow:Destroy()
-	end
-	if a0 then
-		a0:Destroy()
-	end
-	if a1 then
-		a1:Destroy()
-	end
-	beam, highlight, arrow, a0, a1 = nil, nil, nil, nil, nil
+	highlight = nil
 	currentTarget = nil
-	if pointer then
-		pointer.Visible = false
-	end
 end
 
+-- A soft glow on the thing to use. No arrows and no trail: the player is
+-- never steered anywhere.
 local function guideTo(target: Instance?)
 	clearGuide()
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not target or not target:IsA("BasePart") or not root then
+	if not target or not target:IsA("BasePart") then
 		return
 	end
 	currentTarget = target
-	arrowHeight = target.Size.Y / 2 + 9
-	a0 = UI.make("Attachment", { Name = "GuideFrom", Parent = root })
-	a1 = UI.make(
-		"Attachment",
-		{ Name = "GuideTo", Position = Vector3.new(0, 2, 0), Parent = target }
-	)
-	beam = UI.make("Beam", {
-		Attachment0 = a0,
-		Attachment1 = a1,
-		Color = ColorSequence.new(T.Gold),
-		LightEmission = 1,
-		Width0 = 1.6,
-		Width1 = 1.6,
-		FaceCamera = true,
-		Texture = "rbxasset://textures/particles/sparkles_main.dds",
-		TextureMode = Enum.TextureMode.Static,
-		TextureLength = 3,
-		TextureSpeed = 2,
-		Transparency = NumberSequence.new(0.1),
-		Parent = target,
-	})
 	highlight = UI.make("Highlight", {
 		Adornee = target,
 		FillColor = T.Gold,
-		FillTransparency = 0.5,
+		FillTransparency = 0.8,
 		OutlineColor = Color3.new(1, 1, 1),
+		DepthMode = Enum.HighlightDepthMode.Occluded,
 		Parent = target,
 	})
-	-- Big bouncing arrow that shows through walls.
-	local gui: BillboardGui = UI.make("BillboardGui", {
-		Name = "GuideArrow",
-		Size = UDim2.fromOffset(110, 110),
-		StudsOffsetWorldSpace = Vector3.new(0, arrowHeight, 0),
-		AlwaysOnTop = true,
-		LightInfluence = 0,
-		MaxDistance = 2000,
-		Parent = target,
-	})
-	local label = UI.text({ Text = "⬇️", MaxTextSize = 110, Parent = gui })
-	UI.textStroke(label, T.Ink, 2)
-	arrow = gui
 end
 
-local function show(header: string, text: string?, target: Instance?)
+local function show(text: string?, target: Instance?)
 	if not text then
 		banner.Visible = false
 		currentText = nil
 		clearGuide()
 		return
 	end
-	bannerHeader.Text = header
 	if text ~= currentText then
 		currentText = text
 		bannerText.Text = text
 		banner.Visible = true
-		UI.pop(banner, 1.08)
+		UI.pop(banner, 1.04)
 	end
 	if target ~= currentTarget then
 		task.defer(guideTo, target)
@@ -300,19 +236,10 @@ local function render(snapshot: any)
 	if advanced then
 		task.spawn(Net.request, "TutorialStep", SAVE_BASE + step)
 		if lastStep >= 0 then
-			UI.sound("Star", 0.5)
-			if STEPS[step + 1] then
-				Bus.fire("Toast", "✔ Well done! Next job...", "success")
-			else
-				Bus.fire("Confetti", 60)
-				Bus.fire("Announce", "🎄 You're a true Santa's Helper! 🎄", T.Gold)
-				task.delay(3, function()
-					Bus.fire(
-						"Toast",
-						"🎁 Come back every day for bigger gifts and Advent doors!",
-						"success"
-					)
-				end)
+			UI.sound("Star", 0.35)
+			if not STEPS[step + 1] then
+				Bus.fire("Confetti", 40)
+				Bus.fire("Announce", "🎄 You know the ropes now. Have fun!", T.Gold)
 			end
 		end
 	end
@@ -320,59 +247,22 @@ local function render(snapshot: any)
 	local info = STEPS[step + 1]
 	if info then
 		local text, target = info.resolve(snapshot)
-		show(`JOB {step + 1} OF {#STEPS}`, text, target)
+		show(text, target)
 	else
 		local text, target = reminder(snapshot)
-		show("WHAT TO DO NEXT", text, target)
+		show(text, target)
 	end
 end
 
--- Bounce the arrow and aim the screen-edge pointer every frame.
+-- The workshop hints belong to the workshop: they show only while the
+-- player is there, and step aside for menus and the sleigh flight.
 local function animate()
-	-- The guide steps aside for menus and while the sleigh is in the air.
-	screen.Enabled = not flying and not UI.anyPanelOpen()
-	local target = currentTarget
-	local gui = arrow
-	if not target or not gui or not target:IsA("BasePart") or not target.Parent then
-		pointer.Visible = false
-		return
+	local here = Where.atWorkshop()
+	screen.Enabled = here and not flying and not UI.anyPanelOpen()
+	local glow = highlight
+	if glow then
+		glow.Enabled = here
 	end
-	local bounce = math.abs(math.sin(os.clock() * 4)) * 2.5
-	gui.StudsOffsetWorldSpace = Vector3.new(0, arrowHeight + bounce, 0)
-	local camera = Workspace.CurrentCamera
-	if not camera or flying then
-		pointer.Visible = false
-		return
-	end
-	local view = camera.ViewportSize
-	local point, onScreen =
-		camera:WorldToViewportPoint(target.Position + Vector3.new(0, arrowHeight, 0))
-	local inside = onScreen
-		and point.X > view.X * 0.06
-		and point.X < view.X * 0.94
-		and point.Y > view.Y * 0.08
-		and point.Y < view.Y * 0.92
-	if inside then
-		pointer.Visible = false
-		return
-	end
-	local centre = view / 2
-	local dir = Vector2.new(point.X, point.Y) - centre
-	if point.Z < 0 then
-		dir = -dir
-	end
-	if dir.Magnitude < 1 then
-		dir = Vector2.new(0, 1)
-	end
-	dir = dir.Unit
-	local reach = math.min(
-		centre.X * 0.82 / math.max(math.abs(dir.X), 0.001),
-		centre.Y * 0.7 / math.max(math.abs(dir.Y), 0.001)
-	)
-	local at = centre + dir * reach
-	pointer.Position = UDim2.fromOffset(at.X, at.Y)
-	pointer.Rotation = math.deg(math.atan2(dir.Y, dir.X))
-	pointer.Visible = true
 end
 
 function Tutorial.init()
@@ -384,46 +274,27 @@ function Tutorial.init()
 	end)
 	banner = UI.make("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.fromScale(0.5, 0.17),
-		Size = UDim2.fromScale(0.5, 0.13),
-		BackgroundColor3 = Color3.fromRGB(150, 25, 40),
-		BackgroundTransparency = 0.05,
+		Position = UDim2.fromScale(0.5, 0.13),
+		Size = UDim2.fromScale(0.36, 0.06),
+		BackgroundColor3 = Color3.fromRGB(30, 22, 30),
+		BackgroundTransparency = 0.3,
 		Visible = false,
 		Parent = screen,
 	})
 	UI.make(
 		"UISizeConstraint",
-		{ MinSize = Vector2.new(300, 76), MaxSize = Vector2.new(760, 124), Parent = banner }
+		{ MinSize = Vector2.new(260, 36), MaxSize = Vector2.new(560, 52), Parent = banner }
 	)
-	UI.corner(banner, 16)
-	UI.stroke(banner, T.Gold, 3.5)
-	bannerHeader = UI.text({
-		Text = "",
-		Size = UDim2.fromScale(0.94, 0.22),
-		Position = UDim2.fromScale(0.03, 0.06),
-		TextColor3 = T.Gold,
-		MaxTextSize = 18,
-		Parent = banner,
-	})
-	UI.textStroke(bannerHeader, T.Ink, 1.5)
+	UI.corner(banner, 14)
+	UI.stroke(banner, T.Gold, 1.5)
 	bannerText = UI.text({
 		Text = "",
-		Size = UDim2.fromScale(0.94, 0.64),
-		Position = UDim2.fromScale(0.03, 0.3),
-		MaxTextSize = 28,
-		TextWrapped = true,
+		Size = UDim2.fromScale(0.94, 0.76),
+		Position = UDim2.fromScale(0.03, 0.12),
+		MaxTextSize = 22,
 		Parent = banner,
 	})
-	UI.textStroke(bannerText, T.Ink, 2)
-	pointer = UI.text({
-		Name = "Pointer",
-		Text = "➡️",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Size = UDim2.fromOffset(84, 84),
-		MaxTextSize = 84,
-		Visible = false,
-		Parent = screen,
-	})
+	UI.textStroke(bannerText, T.Ink, 1.5)
 end
 
 function Tutorial.start()
@@ -449,7 +320,7 @@ function Tutorial.start()
 	task.spawn(function()
 		while true do
 			task.wait(3)
-			if banner.Visible and not beam then
+			if banner.Visible and not highlight then
 				retarget()
 			end
 		end

@@ -1,6 +1,10 @@
-# 🎄 Santa's Little Helper
+# 🎄 Christmas Playground
 
-A cozy Christmas toy-workshop tycoon for Roblox. Build toy machines, hire elves,
+A Christmas village of mini games for Roblox: a snowball fight with elf bots, a
+train ride, a reindeer carousel, an ice rink and Santa's Workshop. Players land
+in the plaza, watch a short trailer and walk through a gate to pick a game.
+
+Santa's Workshop is a cozy Christmas toy-workshop tycoon for Roblox. Build toy machines, hire elves,
 load Santa's sleigh before it departs, hatch and evolve pet reindeer, dress up in
 ugly sweaters, and fly a sleigh over a snowy town dropping presents down chimneys.
 

@@ -1,5 +1,5 @@
 --!strict
--- Santa's Little Helper server entry point.
+-- Christmas Playground server entry point.
 -- Systems are started in an explicit order because some depend on others
 -- (the world must exist before plots are claimed, data before gameplay).
 
@@ -15,6 +15,8 @@ local Pets = require(Systems.Pets)
 local Rewards = require(Systems.Rewards)
 local Shop = require(Systems.Shop)
 local Leaderboards = require(Systems.Leaderboards)
+local Snowball = require(Systems.Snowball)
+local Playground = require(Systems.Playground)
 
 WorldBuilder.init()
 
@@ -28,7 +30,9 @@ Pets.start()
 Rewards.start()
 Shop.start()
 Leaderboards.start()
+Snowball.start()
+Playground.start()
 
 PlayerData.start()
 
-print("[Santa's Little Helper] server started 🎄")
+print("[Christmas Playground] server started 🎄")

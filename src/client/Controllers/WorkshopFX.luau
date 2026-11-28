@@ -70,6 +70,30 @@ local function tossPresent(from: Vector3, to: Vector3, size: number, variant: nu
 	present:Destroy()
 end
 
+-- A quick burst of sparkles in the world.
+local function sparkle(at: Vector3, amount: number)
+	local holder = Build.deco({
+		Size = Vector3.new(1, 1, 1),
+		CFrame = CFrame.new(at),
+		Transparency = 1,
+		Parent = toyFolder,
+	})
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	emitter.Color = ColorSequence.new(Color3.fromRGB(255, 225, 120), Color3.new(1, 1, 1))
+	emitter.LightEmission = 1
+	emitter.Size = NumberSequence.new(1.1, 0)
+	emitter.Lifetime = NumberRange.new(0.4, 0.9)
+	emitter.Speed = NumberRange.new(5, 11)
+	emitter.SpreadAngle = Vector2.new(180, 180)
+	emitter.Rate = 0
+	emitter.Parent = holder
+	emitter:Emit(amount)
+	task.delay(1.2, function()
+		holder:Destroy()
+	end)
+end
+
 local function sackTop(plotCF: CFrame): Vector3
 	return (plotCF * CFrame.new(PlotLayout.SACK_X, 6.5, PlotLayout.BELT_Z)).Position
 end
@@ -299,7 +323,9 @@ function WorkshopFX.start()
 			return
 		end
 		local plotCF = PlotLayout.plotCFrame(index, Config.MAX_PLOTS)
-		tossPresent(tableTop(plotCF), sackTop(plotCF), 1.8, math.random(1, 6))
+		sparkle(tableTop(plotCF), 24)
+		tossPresent(tableTop(plotCF), sackTop(plotCF), 2.2, math.random(1, 6))
+		sparkle(sackTop(plotCF), 14)
 	end)
 
 	local twinkleStep = -1
