@@ -2243,9 +2243,10 @@ local function buildGates(hub: Instance)
 			CFrame = cf * CFrame.new(0, 0.15, 0),
 			Color = gate.color,
 			Material = Enum.Material.Neon,
+			CanCollide = false,
+			CanTouch = true,
 			Parent = gates,
 		})
-		pad.CanCollide = false
 		pad.Transparency = 0.25
 		pad:SetAttribute("Place", gate.id)
 		Build.light(pad, gate.color, 14, 1.2)
