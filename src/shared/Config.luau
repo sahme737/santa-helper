@@ -1,11 +1,11 @@
 --!strict
--- Santa's Little Helper: every tunable gameplay number lives here.
+-- Christmas Playground: every tunable gameplay number lives here.
 -- NOTE: this module replicates to clients. Nothing secret belongs here, and the
 -- server never trusts a client-reported value derived from this file.
 
 local Config = {}
 
-Config.GAME_NAME = "Santa's Little Helper"
+Config.GAME_NAME = "Christmas Playground"
 Config.DATASTORE_NAME = "SantasHelper_Profiles_v1"
 Config.LEADERBOARD_DELIVERED = "SantasHelper_Delivered_2026"
 Config.LEADERBOARD_CHEER = "SantasHelper_Cheer_2026"
@@ -188,6 +188,18 @@ Config.PLAYGROUND = {
 		RADIUS = 24,
 		ICE_Y = 0.62, -- top of the ice, just above the slate path under it
 	},
+	-- Everyone lands here, in front of a row of gates, one for each game.
+	LANDING = Vector3.new(0, 0.6, -105),
+	GATE_DISTANCE = 34,
+	GATES = {
+		{ id = "Snowball", text = "❄️ Snowball Fight", color = Color3.fromRGB(70, 150, 220) },
+		{ id = "Train", text = "🚂 North Pole Express", color = Color3.fromRGB(35, 130, 75) },
+		{ id = "Workshop", text = "🎁 Santa's Workshop", color = Color3.fromRGB(200, 40, 50) },
+		{ id = "Carousel", text = "🎠 Reindeer Carousel", color = Color3.fromRGB(150, 80, 200) },
+		{ id = "Rink", text = "⛸ Ice Rink", color = Color3.fromRGB(60, 170, 200) },
+	},
+	-- Cheer a brand-new player starts with, enough for a few rides.
+	STARTING_CHEER = 100,
 }
 
 Config.SACK = {
@@ -912,8 +924,30 @@ Config.SOUNDS = {
 
 -- Music playlists: each track plays in turn.
 Config.MUSIC = {
-	Workshop = { "rbxassetid://9046738456", "rbxassetid://1838667764", "rbxassetid://9046740461" },
-	Sleigh = { "rbxassetid://1842909673", "rbxassetid://9047876673" },
+	-- Shuffled round the village. All from the licensed APM library on the
+	-- Creator Store.
+	Workshop = {
+		"rbxassetid://9046738456",
+		"rbxassetid://1838667764",
+		"rbxassetid://9046740461",
+		"rbxassetid://1839945406", -- Jingle Bells
+		"rbxassetid://9046753811", -- Sleigh Ride
+		"rbxassetid://1841342574", -- Santa Claus is Coming
+		"rbxassetid://1839945368", -- Deck the Halls
+		"rbxassetid://1841238992", -- Let it Snow
+		"rbxassetid://9046741231", -- Wrapping Gifts
+		"rbxassetid://9046739318", -- Snowman Song
+		"rbxassetid://1835649208", -- Feliz Navidad
+		"rbxassetid://1838667168", -- We Wish You A Merry Christmas
+		"rbxassetid://9046757549", -- Winter Bells
+	},
+	Sleigh = {
+		"rbxassetid://1842909673",
+		"rbxassetid://9047876673",
+		"rbxassetid://1839286187", -- Jingle Bells Rock
+		"rbxassetid://1842988035", -- We Wish You A Merry Christmas (Rock)
+	},
+	Trailer = { "rbxassetid://9038460167" }, -- Christmas Frenzy
 	VOLUME = 0.22,
 }
 

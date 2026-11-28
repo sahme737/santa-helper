@@ -1,5 +1,5 @@
 --!strict
--- Music and ambience. Plays a Christmas playlist in the workshop, switches to
+-- Music and ambience. Shuffles a Christmas playlist round the village, switches to
 -- an upbeat one in the sleigh, and layers sleigh bells, wind and a ticking
 -- clock over the delivery flight. Also turns server "Effect" pushes into
 -- reward sounds. The 🎵 button on the HUD mutes the music only.
@@ -43,7 +43,12 @@ local function nextTrack()
 		music:Stop()
 		return
 	end
-	trackIndex = trackIndex % #list + 1
+	-- A random track each time, never the same one twice in a row.
+	local pick = math.random(1, #list)
+	if #list > 1 and pick == trackIndex then
+		pick = pick % #list + 1
+	end
+	trackIndex = pick
 	music.SoundId = list[trackIndex]
 	music.Volume = 0
 	music.TimePosition = 0
@@ -95,6 +100,9 @@ function Audio.start()
 	music.Ended:Connect(nextTrack)
 	nextTrack()
 
+	Bus.on("MusicMode", function(newMode: string)
+		Audio.setMode(newMode)
+	end)
 	Bus.on("ToggleMusic", function()
 		Audio.setMuted(not muted)
 	end)

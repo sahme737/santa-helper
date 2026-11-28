@@ -1,7 +1,7 @@
 --!strict
--- The guide: one short line at the top of the screen saying what to do next,
--- with a golden path and a small arrow over the place to go. It never shouts
--- and never stacks popups. Progress is saved so it never repeats; after the
+-- Workshop hints: one short line at the top of the screen saying what to do
+-- next, shown only while the player is at their workshop, with a soft glow
+-- on the thing to use. No arrows, no trails, no popups. Progress is saved so it never repeats; after the
 -- chain, a reminder appears only when there is something obvious to do.
 
 local Players = game:GetService("Players")
@@ -15,6 +15,7 @@ local Format = require(Shared.Util.Format)
 
 local Lib = script.Parent.Parent:WaitForChild("Lib")
 local UI = require(Lib.UI)
+local Where = require(Lib.Where)
 local Net = require(Lib.Net)
 local State = require(Lib.State)
 local Bus = require(Lib.Bus)
@@ -174,90 +175,36 @@ end
 local screen: ScreenGui
 local banner: Frame
 local bannerText: TextLabel
-local pointer: TextLabel
-local beam: Beam? = nil
 local highlight: Highlight? = nil
-local arrow: BillboardGui? = nil
-local a0: Attachment? = nil
-local a1: Attachment? = nil
 local currentTarget: Instance? = nil
 local currentText: string? = nil
 local lastStep = -1
-local arrowHeight = 8
 local flying = false
 
 local function clearGuide()
-	if beam then
-		beam:Destroy()
-	end
 	if highlight then
 		highlight:Destroy()
 	end
-	if arrow then
-		arrow:Destroy()
-	end
-	if a0 then
-		a0:Destroy()
-	end
-	if a1 then
-		a1:Destroy()
-	end
-	beam, highlight, arrow, a0, a1 = nil, nil, nil, nil, nil
+	highlight = nil
 	currentTarget = nil
-	if pointer then
-		pointer.Visible = false
-	end
 end
 
+-- A soft glow on the thing to use. No arrows and no trail: the player is
+-- never steered anywhere.
 local function guideTo(target: Instance?)
 	clearGuide()
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not target or not target:IsA("BasePart") or not root then
+	if not target or not target:IsA("BasePart") then
 		return
 	end
 	currentTarget = target
-	arrowHeight = target.Size.Y / 2 + 7
-	a0 = UI.make("Attachment", { Name = "GuideFrom", Parent = root })
-	a1 = UI.make(
-		"Attachment",
-		{ Name = "GuideTo", Position = Vector3.new(0, 2, 0), Parent = target }
-	)
-	beam = UI.make("Beam", {
-		Attachment0 = a0,
-		Attachment1 = a1,
-		Color = ColorSequence.new(T.Gold),
-		LightEmission = 1,
-		Width0 = 1,
-		Width1 = 1,
-		FaceCamera = true,
-		Texture = "rbxasset://textures/particles/sparkles_main.dds",
-		TextureMode = Enum.TextureMode.Static,
-		TextureLength = 3,
-		TextureSpeed = 2,
-		Transparency = NumberSequence.new(0.35),
-		Parent = target,
-	})
 	highlight = UI.make("Highlight", {
 		Adornee = target,
 		FillColor = T.Gold,
-		FillTransparency = 0.75,
+		FillTransparency = 0.8,
 		OutlineColor = Color3.new(1, 1, 1),
+		DepthMode = Enum.HighlightDepthMode.Occluded,
 		Parent = target,
 	})
-	-- Big bouncing arrow that shows through walls.
-	local gui: BillboardGui = UI.make("BillboardGui", {
-		Name = "GuideArrow",
-		Size = UDim2.fromOffset(64, 64),
-		StudsOffsetWorldSpace = Vector3.new(0, arrowHeight, 0),
-		AlwaysOnTop = true,
-		LightInfluence = 0,
-		MaxDistance = 600,
-		Parent = target,
-	})
-	local label = UI.text({ Text = "⬇️", MaxTextSize = 64, Parent = gui })
-	UI.textStroke(label, T.Ink, 2)
-	arrow = gui
 end
 
 local function show(text: string?, target: Instance?)
@@ -307,52 +254,15 @@ local function render(snapshot: any)
 	end
 end
 
--- Bounce the arrow and aim the screen-edge pointer every frame.
+-- The workshop hints belong to the workshop: they show only while the
+-- player is there, and step aside for menus and the sleigh flight.
 local function animate()
-	-- The guide steps aside for menus and while the sleigh is in the air.
-	screen.Enabled = not flying and not UI.anyPanelOpen()
-	local target = currentTarget
-	local gui = arrow
-	if not target or not gui or not target:IsA("BasePart") or not target.Parent then
-		pointer.Visible = false
-		return
+	local here = Where.atWorkshop()
+	screen.Enabled = here and not flying and not UI.anyPanelOpen()
+	local glow = highlight
+	if glow then
+		glow.Enabled = here
 	end
-	local bounce = math.abs(math.sin(os.clock() * 3)) * 1.5
-	gui.StudsOffsetWorldSpace = Vector3.new(0, arrowHeight + bounce, 0)
-	local camera = Workspace.CurrentCamera
-	if not camera or flying then
-		pointer.Visible = false
-		return
-	end
-	local view = camera.ViewportSize
-	local point, onScreen =
-		camera:WorldToViewportPoint(target.Position + Vector3.new(0, arrowHeight, 0))
-	local inside = onScreen
-		and point.X > view.X * 0.06
-		and point.X < view.X * 0.94
-		and point.Y > view.Y * 0.08
-		and point.Y < view.Y * 0.92
-	if inside then
-		pointer.Visible = false
-		return
-	end
-	local centre = view / 2
-	local dir = Vector2.new(point.X, point.Y) - centre
-	if point.Z < 0 then
-		dir = -dir
-	end
-	if dir.Magnitude < 1 then
-		dir = Vector2.new(0, 1)
-	end
-	dir = dir.Unit
-	local reach = math.min(
-		centre.X * 0.82 / math.max(math.abs(dir.X), 0.001),
-		centre.Y * 0.7 / math.max(math.abs(dir.Y), 0.001)
-	)
-	local at = centre + dir * reach
-	pointer.Position = UDim2.fromOffset(at.X, at.Y)
-	pointer.Rotation = math.deg(math.atan2(dir.Y, dir.X))
-	pointer.Visible = true
 end
 
 function Tutorial.init()
@@ -385,15 +295,6 @@ function Tutorial.init()
 		Parent = banner,
 	})
 	UI.textStroke(bannerText, T.Ink, 1.5)
-	pointer = UI.text({
-		Name = "Pointer",
-		Text = "➡️",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Size = UDim2.fromOffset(54, 54),
-		MaxTextSize = 54,
-		Visible = false,
-		Parent = screen,
-	})
 end
 
 function Tutorial.start()
@@ -419,7 +320,7 @@ function Tutorial.start()
 	task.spawn(function()
 		while true do
 			task.wait(3)
-			if banner.Visible and not beam then
+			if banner.Visible and not highlight then
 				retarget()
 			end
 		end

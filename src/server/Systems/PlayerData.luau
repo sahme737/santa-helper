@@ -24,7 +24,7 @@ local JOB_ID = if game.JobId ~= "" then game.JobId else "studio-" .. tostring(ma
 
 local DEFAULT_PROFILE: Profile = {
 	version = CURRENT_VERSION,
-	coins = 0,
+	coins = Config.PLAYGROUND.STARTING_CHEER,
 	snowflakes = 0,
 	lifetimeCoins = 0,
 	delivered = 0,

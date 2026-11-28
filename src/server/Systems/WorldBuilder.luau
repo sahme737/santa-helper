@@ -406,7 +406,8 @@ local function buildHub(world: Instance)
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "HubSpawn"
 	spawn.Size = Vector3.new(12, 1, 12)
-	spawn.CFrame = CFrame.new(0, 0.6, -80)
+	-- Facing the gates and the giant tree behind them.
+	spawn.CFrame = CFrame.new(Config.PLAYGROUND.LANDING) * CFrame.Angles(0, math.pi, 0)
 	spawn.Anchored = true
 	spawn.Transparency = 1
 	spawn.CanCollide = false
@@ -2221,6 +2222,46 @@ local function buildPlayground(hub: Instance)
 	model.Parent = hub
 end
 
+-- The landing: a fan of gates in front of the spawn, one for each game.
+-- Walking through a gate takes the player there (see Systems/Playground).
+local function buildGates(hub: Instance)
+	local play = Config.PLAYGROUND
+	local landing = Vector3.new(play.LANDING.X, 0.5, play.LANDING.Z)
+	local gates = folder("Gates", hub)
+	local count = #play.GATES
+	for i, gate in play.GATES do
+		local angle = math.rad((i - (count + 1) / 2) * 32)
+		local pos = landing + Vector3.new(math.sin(angle), 0, math.cos(angle)) * play.GATE_DISTANCE
+		-- -Z (the front of the sign) looks back at the landing.
+		local cf = CFrame.lookAt(pos, landing)
+		candyPole(gates, cf * CFrame.new(-6.5, 0, 0), 11, 1.4)
+		candyPole(gates, cf * CFrame.new(6.5, 0, 0), 11, 1.4)
+		sign(gates, cf * CFrame.new(0, 13, 0), gate.text, 15, 4, gate.color, Color3.new(1, 1, 1))
+		local pad = Build.part({
+			Name = "Gate_" .. gate.id,
+			Size = Vector3.new(11, 0.3, 5),
+			CFrame = cf * CFrame.new(0, 0.15, 0),
+			Color = gate.color,
+			Material = Enum.Material.Neon,
+			Parent = gates,
+		})
+		pad.CanCollide = false
+		pad.Transparency = 0.25
+		pad:SetAttribute("Place", gate.id)
+		Build.light(pad, gate.color, 14, 1.2)
+	end
+	local middle = landing + Vector3.new(0, 0, play.GATE_DISTANCE)
+	sign(
+		gates,
+		CFrame.lookAt(middle + Vector3.new(0, 20.5, 0), landing + Vector3.new(0, 20.5, 0)),
+		"🎄 CHRISTMAS PLAYGROUND 🎄\nWalk through a gate to play",
+		34,
+		7,
+		Color3.fromRGB(30, 90, 50),
+		Color3.fromRGB(255, 225, 120)
+	)
+end
+
 function WorldBuilder.init()
 	buildLighting()
 	local world = Instance.new("Folder")
@@ -2236,6 +2277,7 @@ function WorldBuilder.init()
 	buildEventSign(hub)
 	buildSnowArena(hub)
 	buildPlayground(hub)
+	buildGates(hub)
 
 	local plots = folder("Plots", workspace)
 	for i = 1, Config.MAX_PLOTS do

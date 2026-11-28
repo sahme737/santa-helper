@@ -1105,18 +1105,9 @@ function Workshop.start()
 	end
 
 	PlayerData.onLoaded(function(player, profile)
+		-- The workshop is one of the games now: players land in the plaza
+		-- and come here through the Workshop gate or the Games list.
 		claimPlot(player, profile)
-		local function onCharacter(character: Model)
-			task.wait(0.2)
-			local cf = Workshop.spawnCFrame(player)
-			if cf and character.Parent then
-				character:PivotTo(cf)
-			end
-		end
-		player.CharacterAdded:Connect(onCharacter)
-		if player.Character then
-			task.spawn(onCharacter, player.Character)
-		end
 	end)
 
 	Players.PlayerRemoving:Connect(releasePlot)

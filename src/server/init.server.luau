@@ -1,5 +1,5 @@
 --!strict
--- Santa's Little Helper server entry point.
+-- Christmas Playground server entry point.
 -- Systems are started in an explicit order because some depend on others
 -- (the world must exist before plots are claimed, data before gameplay).
 
@@ -35,4 +35,4 @@ Playground.start()
 
 PlayerData.start()
 
-print("[Santa's Little Helper] server started 🎄")
+print("[Christmas Playground] server started 🎄")

@@ -3,12 +3,14 @@
 -- the rides. The rides themselves are drawn on each client; the server only
 -- checks the player is at the ride and takes the Cheer for the ticket.
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 
 local Net = require(script.Parent.Parent.Lib.Net)
 local PlayerData = require(script.Parent.PlayerData)
 local PlayerState = require(script.Parent.PlayerState)
+local Workshop = require(script.Parent.Workshop)
 
 local Playground = {}
 
@@ -39,6 +41,7 @@ local PLACES: { [string]: { at: Vector3, look: Vector3 } } = {
 		look = PLAY.CAROUSEL.CENTER,
 	},
 	Rink = { at = plazaSide(PLAY.RINK.CENTER, PLAY.RINK.RADIUS - 6), look = PLAY.RINK.CENTER },
+	Plaza = { at = PLAY.LANDING, look = Vector3.zero },
 }
 
 local RIDES: { [string]: { cost: number, at: Vector3, reach: number } } = {
@@ -55,23 +58,61 @@ local function rootOf(player: Player): BasePart?
 	return nil
 end
 
+local function go(player: Player, place: string): (boolean, string?)
+	local character = player.Character
+	if not character then
+		return false, nil
+	end
+	if character:FindFirstChild("DeliverySleigh") then
+		return false, "Finish your delivery first"
+	end
+	if place == "Workshop" then
+		Workshop.sendHome(player)
+		return true, nil
+	end
+	local spot = PLACES[place]
+	if not spot then
+		return false, nil
+	end
+	local at = spot.at + Vector3.new(0, 3.5, 0)
+	character:PivotTo(CFrame.lookAt(at, Vector3.new(spot.look.X, at.Y, spot.look.Z)))
+	return true, nil
+end
+
 function Playground.start()
 	Net.handle("GoPlace", 0.5, 2, function(player, place: unknown)
 		if typeof(place) ~= "string" then
 			return false, nil
 		end
-		local spot = PLACES[place]
-		local character = player.Character
-		if not spot or not character then
-			return false, nil
-		end
-		if character:FindFirstChild("DeliverySleigh") then
-			return false, "Finish your delivery first"
-		end
-		local at = spot.at + Vector3.new(0, 3.5, 0)
-		character:PivotTo(CFrame.lookAt(at, Vector3.new(spot.look.X, at.Y, spot.look.Z)))
-		return true, nil
+		return go(player, place)
 	end)
+
+	-- Walking through a gate at the landing does the same as the Games list.
+	local lastGate: { [Player]: number } = {}
+	Players.PlayerRemoving:Connect(function(player)
+		lastGate[player] = nil
+	end)
+	local world = workspace:FindFirstChild("World")
+	local gates = world and world:FindFirstChild("Gates", true)
+	for _, pad in if gates then gates:GetChildren() else {} do
+		local place = pad:GetAttribute("Place")
+		if not pad:IsA("BasePart") or typeof(place) ~= "string" then
+			continue
+		end
+		pad.Touched:Connect(function(hit)
+			local character = hit.Parent
+			local player = character and Players:GetPlayerFromCharacter(character)
+			if not player or hit.Name ~= "HumanoidRootPart" then
+				return
+			end
+			local now = os.clock()
+			if now - (lastGate[player] or 0) < 1.5 then
+				return
+			end
+			lastGate[player] = now
+			go(player, place)
+		end)
+	end
 
 	Net.handle("RideTicket", 1, 2, function(player, ride: unknown)
 		if typeof(ride) ~= "string" then
@@ -88,7 +129,7 @@ function Playground.start()
 			return false, "Come closer to the ride"
 		end
 		if not PlayerState.trySpend(player, profile, "coins", info.cost) then
-			return false, `A ticket costs {info.cost} Cheer. Wrap a present to earn some!`
+			return false, `A ticket costs {info.cost} Cheer. Earn some in Santa's Workshop!`
 		end
 		return true, info.cost
 	end)

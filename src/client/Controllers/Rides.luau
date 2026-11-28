@@ -445,13 +445,19 @@ local PLACES = {
 		color = Color3.fromRGB(150, 80, 200),
 	},
 	{ id = "Rink", text = "⛸ Ice Rink\nFree", color = Color3.fromRGB(60, 170, 200) },
+	{
+		id = "Workshop",
+		text = "🎁 Santa's Workshop\nWrap and deliver presents",
+		color = Color3.fromRGB(200, 40, 50),
+	},
+	{ id = "Plaza", text = "🎄 Plaza\nBack to the gates", color = Color3.fromRGB(90, 90, 110) },
 }
 
 local function buildPanel()
 	panel = UI.panel(screen, "🎄 Christmas Playground", T.Green)
 	UI.make("UIGridLayout", {
-		CellSize = UDim2.fromScale(0.47, 0.44),
-		CellPadding = UDim2.fromScale(0.04, 0.06),
+		CellSize = UDim2.fromScale(0.47, 0.3),
+		CellPadding = UDim2.fromScale(0.04, 0.04),
 		HorizontalAlignment = Enum.HorizontalAlignment.Center,
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Parent = panel.content,
@@ -462,7 +468,7 @@ local function buildPanel()
 			Text = place.text,
 			Color = place.color,
 			LayoutOrder = i,
-			MaxTextSize = 34,
+			MaxTextSize = 30,
 			Parent = panel.content,
 			OnClick = function()
 				panel.close()

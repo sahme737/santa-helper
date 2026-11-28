@@ -13,6 +13,7 @@ local Format = require(Shared.Util.Format)
 
 local Lib = script.Parent.Parent:WaitForChild("Lib")
 local UI = require(Lib.UI)
+local Where = require(Lib.Where)
 local Net = require(Lib.Net)
 local State = require(Lib.State)
 local Bus = require(Lib.Bus)
@@ -390,17 +391,10 @@ local function build()
 			Bus.fire("OpenMenu", "Store")
 		end)
 	)
+	-- The list of games (and the way back to the plaza) is always there.
 	add(
 		0,
-		menuButton(menu, 7, "🏠", "Home", Color3.fromRGB(90, 90, 110), function()
-			Net.request("GoHome")
-		end)
-	)
-	-- The playground (snowball fight, train, carousel, rink) is open to
-	-- everyone from the first minute.
-	add(
-		0,
-		menuButton(menu, 8, "🎡", "Play", Color3.fromRGB(70, 150, 220), function()
+		menuButton(menu, 0, "🎡", "Games", Color3.fromRGB(70, 150, 220), function()
 			Bus.fire("OpenPlay")
 		end)
 	)
@@ -636,6 +630,8 @@ local function onHeartbeat()
 	else
 		boostChip.Visible = false
 	end
+	-- The sack only matters while working in the workshop.
+	sackFrame.Visible = Where.atWorkshop()
 	if profile and State.data then
 		local capacity = Economy.sackCapacity(profile.sackLevel)
 		sackFrame.BackgroundColor3 = if profile.sack >= capacity
